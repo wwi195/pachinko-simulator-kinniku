@@ -46,6 +46,35 @@ body{
 .ms2{font-size:13px;color:var(--dim);margin-bottom:12px;}
 #game{display:none;}
 #game.active{display:flex;min-height:100vh;}
+#game{flex-direction:column;height:100vh;overflow:hidden;}
+#stats{background:var(--panel2);border-bottom:2px solid var(--ring);padding:16px 10px 5px;flex-shrink:0;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:5px;}
+.sb{background:var(--panel);border-radius:8px;padding:6px 10px;display:flex;align-items:center;justify-content:center;gap:5px;}
+.sl{font-size:12px;color:var(--dim);}
+.sv{font-size:18px;font-weight:bold;}
+.sv.neg{color:var(--red);}
+.sv.gold{color:var(--gold);}
+.bbl{background:var(--panel);border-radius:8px;padding:6px 10px;margin-bottom:5px;}
+.bb-top{display:flex;align-items:baseline;justify-content:center;gap:6px;margin-bottom:4px;}
+.bb-lbl{font-size:10px;color:var(--gold);}
+.bb-num{font-size:28px;font-weight:bold;color:var(--gold);line-height:1;}
+#ctrl{flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 14px 10px;gap:10px;border-bottom:1px solid #2a2a2a;}
+.mb{border:none;font-weight:bold;cursor:pointer;letter-spacing:1px;transition:all .1s;border-radius:10px;padding:14px;color:#fff;}
+.mb:active:not(:disabled){transform:scale(.97);}
+.mb:disabled{opacity:.35;cursor:default;}
+.spinRow{display:flex;justify-content:center;align-items:center;gap:14px;width:100%;}
+.circ{border-radius:50%;width:44%;max-width:170px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;}
+.circ .ci{font-size:30px;line-height:1;margin-bottom:6px;}
+.circ .ct{font-size:13px;line-height:1.3;}
+.b1{background:linear-gradient(135deg,#1a3a6b,#2563eb,#1a3a6b);}
+.b100{background:linear-gradient(135deg,#6b1a1a,#dc2626,#6b1a1a);}
+.brush1,.brush10,.brushskip{flex:1;background:linear-gradient(135deg,#7a0000,#c81e1e,#ffd700,#7a0000);padding:14px 4px;font-size:13px;}
+.brt{width:100%;max-width:380px;border-radius:14px;background:var(--panel2);border:1px solid #444;color:var(--dim);font-size:13px;padding:9px;max-width:200px;}
+#hw{flex:1;overflow-y:auto;padding:8px 12px 20px;}
+.ht{font-size:10px;color:var(--dim);margin-bottom:4px;letter-spacing:2px;}
+.hi{font-size:11px;color:#888;padding:3px 0;border-bottom:1px solid #1e1e1e;line-height:1.4;}
+.hi.hit{color:var(--gold);}
+.hi.inv{color:#666;}
 </style>
 </head>
 <body>
@@ -80,6 +109,41 @@ body{
 </div>
 
 <div id="game">
+  <div id="stats">
+    <div class="stats-grid">
+      <div class="sb"><span class="sl">投資額：</span><span class="sv neg" id="ti">¥0</span></div>
+      <div class="sb"><span class="sl">現金残高：</span><span class="sv gold" id="tw">¥0</span></div>
+      <div class="sb" style="grid-column:span 2;justify-content:center;gap:10px"><span class="sl">持ち玉：</span><span class="sv" id="tb" style="color:var(--cyan)">0</span></div>
+      <div class="sb"><span class="sl">スタート：</span><span class="sv" id="tc">0</span></div>
+      <div class="sb"><span class="sl">総回転数：</span><span class="sv" id="tt">0</span></div>
+    </div>
+    <div class="bbl">
+      <div class="bb-top">
+        <div class="bb-lbl">大当たり合計</div>
+        <div class="bb-num" id="tht">0</div>
+        <div class="bb-lbl">回</div>
+      </div>
+    </div>
+    <div id="rushBadge" style="display:none;text-align:center;color:var(--gold);font-weight:bold;font-size:13px;margin-top:4px">RUSH中　残りST <span id="rushStVal">0</span></div>
+  </div>
+
+  <div id="ctrl">
+    <div id="normalCtrl" class="spinRow">
+      <button class="mb b1 circ" id="btn1" onclick="doSpin1()"><span class="ci">▶</span><span class="ct">スタート<br>1回転</span></button>
+      <button class="mb b100 circ" id="btn100" onclick="doSpin100()"><span class="ci">⏩</span><span class="ct">100回転<br>スキップ</span></button>
+    </div>
+    <div id="rushCtrl" class="spinRow" style="display:none">
+      <button class="mb brush1" id="btnR1" onclick="doRushSpin1()">1回転</button>
+      <button class="mb brush10" id="btnR10" onclick="doRushSpin10()">10回転</button>
+      <button class="mb brushskip" id="btnRSkip" onclick="doRushSkip()">次発展まで</button>
+    </div>
+    <button class="mb brt" id="btnr" onclick="doRetire()">退店</button>
+  </div>
+
+  <div id="hw">
+    <div class="ht">— 遊技履歴 —</div>
+    <div id="hl"></div>
+  </div>
 </div>
 
 <div id="ov" class="h"><div id="mb"></div></div>
@@ -154,6 +218,188 @@ function closeM(){
   document.getElementById('ov').classList.add('h');
   if(_res){_res();_res=null;}
 }
+
+/* ============================================================
+   TEST HOOK — rand() wraps Math.random so Playwright can force
+   deterministic outcomes via window.__TEST__.setRandomQueue([...]).
+   Consumed in call order; falls back to real Math.random() once
+   the queue is empty.
+============================================================ */
+let _randQueue=[];
+function rand(){
+  if(_randQueue.length) return _randQueue.shift();
+  return Math.random();
+}
+window.__TEST__={
+  setRandomQueue(arr){ _randQueue=arr.slice(); },
+};
+
+/* ============================================================
+   SPEC CONSTANTS
+============================================================ */
+Object.assign(C,{
+  P_HIT: 1/399.9,
+  B_UNIT_GROSS: 1500,
+  B_UNIT_NET: 1400,
+  P_LEVABURU: 0.30,   // TODO: 仮値。正式値が来たら差し替える
+  P_VFLA: 0.15,        // TODO: 仮値。正式値が来たら差し替える
+  P_RUSH_ENTRY: 0.50,
+  RUSH_ST: 145,
+  P_HATTEN: 1/92.3,
+  P_STOCK_HIT: 1/2.8,
+  STOCK_COUNT: 5,
+  P_ZERO_RESET: 0.50,
+});
+
+/* ============================================================
+   STATE
+============================================================ */
+let S={};
+let _busy=false,_closingChoice=null;
+
+function getSpinLimit(w){
+  return {10000:400,30000:1200,60000:2400,200000:4000}[w]||null;
+}
+function newState(w,reg,shop){
+  const spk=C.SHOPS[reg][shop];
+  S={
+    wallet:w, balls:0,
+    cashUsed:0, investB:0, recovB:0,
+    hits:{
+      total:0,
+      first:0,
+      rushSuccess:0,
+      rushFail:0,
+      stock:[0,0,0,0,0,0], // index = 専用モードでの当たり数(0〜5)、値=発生回数
+    },
+    cur:0, ttl:0,
+    spk, bps:C.BPK/spk,
+    exRate:C.EX[reg],
+    reg, hist:[],
+    pendingInvest:0,
+    spinLimit:getSpinLimit(w), limitPassed:false,
+    rushActive:false, rushST:0, preDevST:0,
+  };
+}
+
+function floor500(y){return Math.floor(y/500)*500;}
+
+function updS(){
+  document.getElementById('ti').textContent=S.cashUsed>0?`−¥${S.cashUsed.toLocaleString()}`:'¥0';
+  document.getElementById('tw').textContent=`¥${S.wallet.toLocaleString()}`;
+  document.getElementById('tb').textContent=Math.floor(S.balls).toLocaleString();
+  document.getElementById('tht').textContent=S.hits.total;
+  document.getElementById('tc').textContent=S.cur;
+  document.getElementById('tt').textContent=S.ttl;
+  document.getElementById('rushBadge').style.display=S.rushActive?'block':'none';
+  document.getElementById('rushStVal').textContent=S.rushST;
+  document.getElementById('normalCtrl').style.display=S.rushActive?'none':'flex';
+  document.getElementById('rushCtrl').style.display=S.rushActive?'flex':'none';
+}
+
+function ensureBalls(){
+  while(S.balls<S.bps){
+    if(S.wallet<1000) return false;
+    S.wallet-=1000; S.balls+=C.BPK;
+    S.cashUsed+=1000; S.investB+=C.BPK;
+    S.pendingInvest+=1000;
+  }
+  return true;
+}
+function consume(){S.balls-=S.bps; S.cur++; S.ttl++;}
+function award(n){S.balls+=n; S.recovB+=n;}
+
+function addH(t,c=''){
+  S.hist.unshift({t,c});
+  if(S.hist.length>150) S.hist.pop();
+  document.getElementById('hl').innerHTML=S.hist.map(h=>`<div class="hi ${h.c}">${h.t}</div>`).join('');
+}
+function flushInvest(){
+  if(S.pendingInvest>0){
+    addH(`${S.cur}回転目：追加投資 ${S.pendingInvest.toLocaleString()}円`,'inv');
+    S.pendingInvest=0;
+  }
+}
+
+function lockAll(v){
+  ['btn1','btn100','btnR1','btnR10','btnRSkip','btnr'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.disabled=v;
+  });
+}
+
+/* ============================================================
+   SPIN LOOP (normal-mode hit chain added in Task 4,
+   RUSH added in Task 5/6 — for now, normal mode always misses)
+============================================================ */
+async function oneSpin(){
+  if(!ensureBalls()) return {over:true};
+  consume(); updS();
+
+  if(S.rushActive){
+    return {ok:true}; // RUSH behavior added in Task 5
+  }
+
+  if(rand()<C.P_HIT){
+    // win chain added in Task 4
+    return {ok:true};
+  }
+  return {ok:true};
+}
+
+async function doSpin1(){
+  if(_busy) return;
+  _busy=true; lockAll(true);
+  const r=await oneSpin();
+  _busy=false; lockAll(false);
+  if(r.over){showSettle();return;}
+  updS();
+}
+
+async function doSpin100(){
+  if(_busy) return;
+  _busy=true; lockAll(true);
+  let over=false;
+  for(let i=0;i<100;i++){
+    const r=await oneSpin();
+    if(r.over){over=true;break;}
+    if(r.stopped) break;
+  }
+  _busy=false; lockAll(false);
+  if(over){showSettle();return;}
+  updS();
+}
+
+async function doRushSpin1(){ if(_busy) return; }
+async function doRushSpin10(){ if(_busy) return; }
+async function doRushSkip(){ if(_busy) return; }
+
+function doRetire(){
+  if(_busy) return;
+  lockAll(true);
+  showSettle();
+}
+
+function showSettle(){
+  const rawExchY=Math.floor(S.balls)*S.exRate;
+  const exchY=floor500(rawExchY);
+  const finalPL=Math.round(exchY-S.cashUsed);
+  const plColor=finalPL>=0?'#22c55e':'#ef4444';
+  const plSign=finalPL>=0?'+':'';
+  const html=`
+    <div class="mt" style="color:var(--gold)">精算</div>
+    <div class="sfin" style="color:${plColor};font-size:26px;font-weight:bold;padding:12px 0">${plSign}¥${Math.abs(finalPL).toLocaleString()}</div>
+    <div style="margin-top:18px;text-align:center">
+      <button class="bok" onclick="location.reload()">もう一度遊ぶ</button>
+    </div>`;
+  showM(html,'mn');
+}
+
+const _origStartGame=startGame;
+startGame=function(){
+  newState(_wallet,_reg,_shop);
+  _origStartGame();
+  updS();
+};
 </script>
 </body>
 </html>
