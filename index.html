@@ -112,11 +112,12 @@ function tmPremium(){return `
     <button class="bok" style="flex:1;background:linear-gradient(135deg,#4c1d95,#a855f7,#4c1d95)" onclick="confirmPremium(true)">はい、応援します</button>
     <button class="bok" style="flex:1;background:#2a2a2a;color:#ccc" onclick="confirmPremium(false)">いいえ</button>
   </div>`;}
-function selPremium(){showM(tmPremium(),'mn');}
+let _preWallet=null;
+function selPremium(){ _preWallet=_wallet; showM(tmPremium(),'mn'); }
 function confirmPremium(yes){
   closeM();
   if(yes){ selW(10000000); }
-  else { _wallet=null; document.getElementById('w-10000000').classList.remove('sel'); chkR(); }
+  else { selW(_preWallet); }
 }
 function selR(r){
   _reg=r; _shop=null;
