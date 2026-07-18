@@ -206,15 +206,25 @@ function startGame(){
 }
 
 let _res=null;
+/* _modalLock: guards against a rapid double-click landing on the NEXT
+   modal in a chain. It's set the instant a modal is rendered and only
+   cleared after a real paint has happened (via double rAF), so a click
+   event that was already queued before that paint (i.e. a click meant
+   for the previous modal) gets ignored by closeM() instead of silently
+   dismissing a modal the user never got to read. */
+let _modalLock=false;
 function showM(html,theme){
   const ov=document.getElementById('ov');
   const box=document.getElementById('mb');
   ov.style.background='';
   box.className=theme||'mn'; box.innerHTML=html;
   ov.classList.remove('h');
+  _modalLock=true;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{_modalLock=false;}));
   return new Promise(r=>{_res=r;});
 }
 function closeM(){
+  if(_modalLock) return;
   document.getElementById('ov').classList.add('h');
   if(_res){_res();_res=null;}
 }
