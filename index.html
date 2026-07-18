@@ -435,6 +435,72 @@ async function endRush(){
   updS();
 }
 
+function tmSenyouIn(){return `
+  <div class="mt" style="color:var(--ring)">🔥 専用モード突入！</div>
+  <button class="bok" onclick="closeM()">次へ →</button>`;}
+
+function tmStockFill(n){return `
+  <div class="mt" style="color:var(--gold)">保留 ${n}/${C.STOCK_COUNT}</div>
+  <div class="ms2">保留を貯めています…</div>
+  <button class="bok" onclick="closeM()">次へ →</button>`;}
+
+function tmJudgeButton(){return `
+  <div class="mt" style="color:var(--gold)">保留5個 貯まりました！</div>
+  <button class="bok" onclick="closeM()">ジャッジ！</button>`;}
+
+const STOCK_RESULT_TEXT={
+  0: {title:'はずれ…', color:'#888'},
+  1: {title:'1500ボーナス！', color:'var(--gold)'},
+  2: {title:'3000ボーナス！', color:'var(--gold)'},
+  3: {title:'4500ボーナス！', color:'var(--gold)'},
+  4: {title:'6000ボーナス！', color:'var(--gold)'},
+  5: {title:'7500ボーナス！', color:'var(--gold)'},
+};
+function tmStockResult(hitCount){
+  const t=STOCK_RESULT_TEXT[hitCount];
+  const netText=hitCount>0?`<div class="bs" style="font-size:14px;color:#aaa;margin-bottom:12px">（実質+${hitCount*C.B_UNIT_NET}発）</div>`:'';
+  return `
+    <div class="mt" style="color:${t.color}">${hitCount}/${C.STOCK_COUNT} 当たり</div>
+    <div class="bm" style="font-size:26px;font-weight:bold;color:${t.color};margin:10px 0 4px">${t.title}</div>
+    ${netText}
+    <button class="bok" onclick="closeM()">続ける</button>`;
+}
+
+async function runSenyouMode(){
+  S.preDevST=S.rushST;
+  await showM(tmSenyouIn(),'mn');
+  for(let i=1;i<=C.STOCK_COUNT;i++){
+    await showM(tmStockFill(i),'mn');
+  }
+  await showM(tmJudgeButton(),'mn');
+
+  let hitCount=0;
+  for(let i=0;i<C.STOCK_COUNT;i++){
+    if(rand()<C.P_STOCK_HIT) hitCount++;
+  }
+  S.hits.stock[hitCount]++;
+
+  if(hitCount===0){
+    if(rand()<C.P_ZERO_RESET){
+      S.rushST=C.RUSH_ST;
+      addH(`専用モード：はずれ（0/5）→ ST145にリセット`,'inv');
+    } else {
+      S.rushST=S.preDevST;
+      addH(`専用モード：はずれ（0/5）→ ST${S.preDevST}回転から再開`,'inv');
+    }
+    updS();
+    await showM(tmStockResult(0),'mn');
+  } else {
+    const gross=hitCount*C.B_UNIT_GROSS;
+    const net=hitCount*C.B_UNIT_NET;
+    award(net);
+    S.rushST=C.RUSH_ST;
+    addH(`専用モード：${hitCount}/5 当たり → ${gross}ボーナス（実質+${net}発）→ ST145にリセット`,'hit');
+    updS();
+    await showM(tmStockResult(hitCount),'mn');
+  }
+}
+
 async function runNormalWinChain(){
   const spin0=S.cur;
   S.hits.total++;
@@ -482,11 +548,8 @@ async function oneSpin(){
   if(S.rushActive){
     S.rushST--;
     if(rand()<C.P_HATTEN){
-      // 専用モード added in Task 6; for now, treat development as a
-      // no-op ST reset so the RUSH loop is testable in isolation.
       addH(`${S.ttl}回転目：発展！`,'hit');
-      S.rushST=C.RUSH_ST;
-      updS();
+      await runSenyouMode();
       return {stopped:true};
     }
     if(S.rushST<=0){
