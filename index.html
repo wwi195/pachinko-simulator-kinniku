@@ -421,6 +421,20 @@ function tmRushResult(win){return win?`
   <div class="ms2">通常時へ戻ります</div>
   <button class="bok" onclick="closeM()">続ける</button>`;}
 
+function tmRushEnd(){return `
+  <div class="mt" style="color:#aaa">🌙 RUSH終了</div>
+  <div class="ms2">STを使い切りました。通常時へ戻ります。</div>
+  <button class="bok" onclick="closeM()">通常時へ</button>`;}
+
+async function endRush(){
+  S.rushActive=false;
+  addH(`RUSH終了（ST消化）`,'inv');
+  updS();
+  await showM(tmRushEnd(),'mn');
+  S.cur=0;
+  updS();
+}
+
 async function runNormalWinChain(){
   const spin0=S.cur;
   S.hits.total++;
@@ -466,7 +480,20 @@ async function oneSpin(){
   consume(); updS();
 
   if(S.rushActive){
-    return {ok:true}; // RUSH behavior added in Task 5
+    S.rushST--;
+    if(rand()<C.P_HATTEN){
+      // 専用モード added in Task 6; for now, treat development as a
+      // no-op ST reset so the RUSH loop is testable in isolation.
+      addH(`${S.ttl}回転目：発展！`,'hit');
+      S.rushST=C.RUSH_ST;
+      updS();
+      return {stopped:true};
+    }
+    if(S.rushST<=0){
+      await endRush();
+      return {stopped:true};
+    }
+    return {ok:true};
   }
 
   if(rand()<C.P_HIT){
@@ -502,9 +529,42 @@ async function doSpin100(){
   updS();
 }
 
-async function doRushSpin1(){ if(_busy) return; }
-async function doRushSpin10(){ if(_busy) return; }
-async function doRushSkip(){ if(_busy) return; }
+async function doRushSpin1(){
+  if(_busy||!S.rushActive) return;
+  _busy=true; lockAll(true);
+  const r=await oneSpin();
+  _busy=false; lockAll(false);
+  if(r.over){showSettle();return;}
+  updS();
+}
+
+async function doRushSpin10(){
+  if(_busy||!S.rushActive) return;
+  _busy=true; lockAll(true);
+  let over=false;
+  for(let i=0;i<10 && S.rushActive;i++){
+    const r=await oneSpin();
+    if(r.over){over=true;break;}
+    if(r.stopped) break;
+  }
+  _busy=false; lockAll(false);
+  if(over){showSettle();return;}
+  updS();
+}
+
+async function doRushSkip(){
+  if(_busy||!S.rushActive) return;
+  _busy=true; lockAll(true);
+  let over=false;
+  while(S.rushActive){
+    const r=await oneSpin();
+    if(r.over){over=true;break;}
+    if(r.stopped) break;
+  }
+  _busy=false; lockAll(false);
+  if(over){showSettle();return;}
+  updS();
+}
 
 function doRetire(){
   if(_busy) return;
