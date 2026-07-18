@@ -328,6 +328,42 @@ function lockAll(v){
 }
 
 /* ============================================================
+   CLOSING TIME (閉店/居座り) — 2000-rotation normal-mode limit,
+   reused from garo7500. Only applies to normal-mode play.
+============================================================ */
+function tmClosingTime(){return `
+  <div class="mt" style="color:var(--gold)">🕐 閉店時間です</div>
+  <div class="ms2" style="line-height:1.8">
+    通常時 <strong style="color:var(--text)">${S.spinLimit}回転</strong> に達しました。<br>
+    このまま続けますか？
+  </div>
+  <div style="display:flex;gap:10px;margin-top:12px">
+    <button class="bok" style="flex:1;background:#1e1e1e;color:#999;border:1px solid #444" onclick="chooseRetire()">退店する</button>
+    <button class="bok" style="flex:1" onclick="chooseContinue()">続行する</button>
+  </div>`;}
+
+function tmAfterClosing(){return `
+  <div class="mt" style="color:var(--purple)">🌙 閉店後の居座り</div>
+  <div class="ms2" style="line-height:1.9">
+    閉店後の店に居座ることになります。<br><br>
+    <span style="color:var(--gold);font-weight:bold">ここのオーナーを応援してくださいね。</span>
+  </div>
+  <button class="bok" onclick="closeM()">わかった！続ける！</button>`;}
+
+function chooseRetire(){_closingChoice='retire';closeM();}
+function chooseContinue(){_closingChoice='continue';closeM();}
+
+async function handleClosingTime(){
+  if(!S.spinLimit||S.limitPassed||S.ttl<S.spinLimit||S.rushActive) return false;
+  _closingChoice=null;
+  await showM(tmClosingTime(),'mn');
+  if(_closingChoice==='retire'){showSettle();return true;}
+  S.limitPassed=true;
+  await showM(tmAfterClosing(),'mn');
+  return true;
+}
+
+/* ============================================================
    SPIN LOOP (normal-mode hit chain added in Task 4,
    RUSH added in Task 5/6 — for now, normal mode always misses)
 ============================================================ */
@@ -352,6 +388,7 @@ async function doSpin1(){
   const r=await oneSpin();
   _busy=false; lockAll(false);
   if(r.over){showSettle();return;}
+  if(await handleClosingTime()) return;
   updS();
 }
 
@@ -366,6 +403,7 @@ async function doSpin100(){
   }
   _busy=false; lockAll(false);
   if(over){showSettle();return;}
+  if(await handleClosingTime()) return;
   updS();
 }
 
