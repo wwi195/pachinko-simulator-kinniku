@@ -364,6 +364,90 @@ async function handleClosingTime(){
 }
 
 /* ============================================================
+   NORMAL-MODE WIN CHAIN — 先バレ→レバブル→Vフラ→ジャッジ→
+   初回1500発→RUSHチャレンジ
+============================================================ */
+function imgDiv(src,fallback){
+  return `<div class="pi" style="width:100%;max-width:300px;height:130px;background:#181818;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#444;font-size:11px;line-height:1.6;text-align:center;margin:0 auto 14px;border:1px dashed #333"><img src="${src}" alt="" style="max-width:100%;max-height:100%;width:auto;height:auto;border-radius:8px" onload="this.parentElement.style.border='none';this.parentElement.style.background='transparent'" onerror="this.style.display='none';this.parentElement.textContent='${fallback}'"></div>`;
+}
+
+function tmSenbare(spin){return `
+  <div class="mt" style="color:var(--gold)">🥊 先バレ発生！</div>
+  <div style="font-size:11px;color:#555;margin-bottom:18px">${spin}回転目</div>
+  <button class="bok" onclick="closeM()">次へ →</button>`;}
+
+function tmLevaburu(){return `
+  ${imgDiv('images/levaburu.png','レバブル演出\n画像プレースホルダー')}
+  <div class="mt" style="color:var(--ring)">💪 レバブル出現！</div>
+  <button class="bok" onclick="closeM()">次へ →</button>`;}
+
+function tmVfla(){return `
+  ${imgDiv('images/vfla.png','Vフラ演出\n画像プレースホルダー')}
+  <div class="mt" style="color:var(--gold)">✨ Vフラ発生！</div>
+  <button class="bok" onclick="closeM()">ジャッジへ →</button>`;}
+
+function tmJudge(){return `
+  ${imgDiv('images/judge.png','JUDGE\n画像プレースホルダー')}
+  <div class="mt" style="color:var(--ring)">⚖️ JUDGE</div>
+  <button class="bok" onclick="closeM()">JUDGE！</button>`;}
+
+function tmHatsuAtari(){return `
+  <div class="mt" style="color:var(--gold)">🏆 1500ボーナス！</div>
+  <div class="bm" style="font-size:26px;font-weight:bold;color:var(--gold);margin:10px 0 4px">1500ボーナス！</div>
+  <div class="bs" style="font-size:14px;color:#aaa;margin-bottom:12px">（獲得 ${C.B_UNIT_NET}発）</div>
+  <button class="bok" onclick="closeM()">次へ →</button>`;}
+
+function tmRushChallenge(){return `
+  <div class="mt" style="color:var(--ring)">🔥 RUSHチャレンジ！</div>
+  <div class="ms2">ボタンを押してRUSH突入をかけろ！</div>
+  <button class="bok" onclick="closeM()">RUSHチャレンジ！</button>`;}
+
+function tmRushResult(win){return win?`
+  ${imgDiv('images/rush_in.png','RUSH突入\n画像プレースホルダー')}
+  <div class="mt" style="color:var(--gold)">🎉 RUSH突入！</div>
+  <div class="ms2">ST${C.RUSH_ST}回転</div>
+  <button class="bok" onclick="closeM()">RUSHへ →</button>`:`
+  <div class="mt" style="color:#888">😢 RUSH突入ならず…</div>
+  <div class="ms2">通常時へ戻ります</div>
+  <button class="bok" onclick="closeM()">続ける</button>`;}
+
+async function runNormalWinChain(){
+  const spin0=S.cur;
+  S.hits.total++;
+  await showM(tmSenbare(spin0),'mn');
+
+  if(rand()<C.P_LEVABURU){
+    await showM(tmLevaburu(),'mn');
+  }
+  if(rand()<C.P_VFLA){
+    await showM(tmVfla(),'mn');
+  }
+  await showM(tmJudge(),'mn');
+
+  award(C.B_UNIT_NET);
+  S.hits.first++;
+  updS();
+  await showM(tmHatsuAtari(),'mn');
+  addH(`${spin0}回転目：先バレ→ジャッジ→初回大当たり(1500) → 実質+${C.B_UNIT_NET}発`,'hit');
+
+  await showM(tmRushChallenge(),'mn');
+  const rushWin=rand()<C.P_RUSH_ENTRY;
+  if(rushWin){
+    S.hits.rushSuccess++;
+    S.rushActive=true;
+    S.rushST=C.RUSH_ST;
+    updS();
+    await showM(tmRushResult(true),'mn');
+  } else {
+    S.hits.rushFail++;
+    updS();
+    await showM(tmRushResult(false),'mn');
+  }
+  S.cur=0;
+  updS();
+}
+
+/* ============================================================
    SPIN LOOP (normal-mode hit chain added in Task 4,
    RUSH added in Task 5/6 — for now, normal mode always misses)
 ============================================================ */
@@ -376,8 +460,9 @@ async function oneSpin(){
   }
 
   if(rand()<C.P_HIT){
-    // win chain added in Task 4
-    return {ok:true};
+    flushInvest();
+    await runNormalWinChain();
+    return {stopped:true};
   }
   return {ok:true};
 }
