@@ -123,6 +123,18 @@ body{
         <div class="bb-num" id="tht">0</div>
         <div class="bb-lbl">回</div>
       </div>
+      <button class="bbToggle" id="bbToggleBtn" onclick="toggleDetail()" style="width:100%;background:var(--panel);border:1px solid #333;color:var(--gold);font-size:11px;padding:6px;border-radius:6px;margin-bottom:4px;cursor:pointer;letter-spacing:1px">▶ 詳細を見る</button>
+      <div class="bbDetail" id="bbDetail" style="display:none;font-size:10px;color:var(--dim)">
+        <div class="br" style="display:flex;justify-content:space-between"><span>初回大当たり</span><span class="bv" id="thFirst">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>RUSHチャレンジ成功</span><span class="bv" id="thRushOk">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>RUSHチャレンジ失敗</span><span class="bv" id="thRushNg">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 5/5</span><span class="bv" id="thStock5">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 4/5</span><span class="bv" id="thStock4">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 3/5</span><span class="bv" id="thStock3">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 2/5</span><span class="bv" id="thStock2">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 1/5</span><span class="bv" id="thStock1">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード はずれ(0/5)</span><span class="bv" id="thStock0">0回</span></div>
+      </div>
     </div>
     <div id="rushBadge" style="display:none;text-align:center;color:var(--gold);font-weight:bold;font-size:13px;margin-top:4px">RUSH中　残りST <span id="rushStVal">0</span></div>
   </div>
@@ -305,6 +317,22 @@ function updS(){
   document.getElementById('rushStVal').textContent=S.rushST;
   document.getElementById('normalCtrl').style.display=S.rushActive?'none':'flex';
   document.getElementById('rushCtrl').style.display=S.rushActive?'flex':'none';
+  document.getElementById('thFirst').textContent=`${S.hits.first}回`;
+  document.getElementById('thRushOk').textContent=`${S.hits.rushSuccess}回`;
+  document.getElementById('thRushNg').textContent=`${S.hits.rushFail}回`;
+  document.getElementById('thStock5').textContent=`${S.hits.stock[5]}回`;
+  document.getElementById('thStock4').textContent=`${S.hits.stock[4]}回`;
+  document.getElementById('thStock3').textContent=`${S.hits.stock[3]}回`;
+  document.getElementById('thStock2').textContent=`${S.hits.stock[2]}回`;
+  document.getElementById('thStock1').textContent=`${S.hits.stock[1]}回`;
+  document.getElementById('thStock0').textContent=`${S.hits.stock[0]}回`;
+}
+
+let _detailOpen=false;
+function toggleDetail(){
+  _detailOpen=!_detailOpen;
+  document.getElementById('bbDetail').style.display=_detailOpen?'block':'none';
+  document.getElementById('bbToggleBtn').textContent=_detailOpen?'▼ 詳細を閉じる':'▶ 詳細を見る';
 }
 
 function ensureBalls(){
@@ -632,11 +660,25 @@ function showSettle(){
   const rawExchY=Math.floor(S.balls)*S.exRate;
   const exchY=floor500(rawExchY);
   const finalPL=Math.round(exchY-S.cashUsed);
+  const outRate=S.investB>0?Math.round(Math.floor(S.balls)/S.investB*100):0;
   const plColor=finalPL>=0?'#22c55e':'#ef4444';
   const plSign=finalPL>=0?'+':'';
+  const ratelabel=S.reg==='par'?'等価':'3.57円返し';
   const html=`
     <div class="mt" style="color:var(--gold)">精算</div>
-    <div class="sfin" style="color:${plColor};font-size:26px;font-weight:bold;padding:12px 0">${plSign}¥${Math.abs(finalPL).toLocaleString()}</div>
+    <hr style="border-color:#333;margin:8px 0">
+    <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">持ち玉</span><span class="sv2">${Math.floor(S.balls).toLocaleString()}玉</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">換金（${ratelabel}）</span><span class="sv2">¥${Math.round(exchY).toLocaleString()}</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">総投資</span><span class="sv2" style="color:var(--red)">−¥${S.cashUsed.toLocaleString()}</span></div>
+    <hr style="border-color:#333;margin:8px 0">
+    <div class="sfin" style="color:${plColor};font-size:26px;font-weight:bold;text-align:center;padding:12px 0">${plSign}¥${Math.abs(finalPL).toLocaleString()}</div>
+    <hr style="border-color:#333;margin:8px 0">
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">総回転数</span><span class="sv2">${S.ttl}回</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">大当たり合計</span><span class="sv2">${S.hits.total}回</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">初回大当たり</span><span class="sv2">${S.hits.first}回</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">RUSHチャレンジ成功/失敗</span><span class="sv2">${S.hits.rushSuccess}/${S.hits.rushFail}</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">専用モード 5/5〜0/5</span><span class="sv2">${S.hits.stock[5]}/${S.hits.stock[4]}/${S.hits.stock[3]}/${S.hits.stock[2]}/${S.hits.stock[1]}/${S.hits.stock[0]}</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">出玉率</span><span class="sv2" style="color:${outRate>=100?'#22c55e':'#ef4444'}">${outRate}%</span></div>
     <div style="margin-top:18px;text-align:center">
       <button class="bok" onclick="location.reload()">もう一度遊ぶ</button>
     </div>`;
