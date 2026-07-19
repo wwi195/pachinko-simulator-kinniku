@@ -608,6 +608,7 @@ async function doSpin100(){
     const r=await oneSpin();
     if(r.over){over=true;break;}
     if(r.stopped) break;
+    if(S.spinLimit&&!S.limitPassed&&S.ttl>=S.spinLimit) break;
   }
   _busy=false; lockAll(false);
   if(over){showSettle();return;}
