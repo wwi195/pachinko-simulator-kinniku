@@ -470,15 +470,19 @@ function tmJudgeButton(){return `
   <div class="mt" style="color:var(--gold)">保留5個 貯まりました！</div>
   <button class="bok" onclick="closeM()">ジャッジ！</button>`;}
 
-function tmStockResult(hitCount){
+function tmStockResult(hitCount,stReset,stValue){
   const color=hitCount>0?'var(--gold)':'#888';
   const title=hitCount>0?`${hitCount*C.B_UNIT_GROSS}ボーナス！`:'はずれ…';
   const netText=hitCount>0?`<div class="bs" style="font-size:14px;color:#aaa;margin-bottom:12px">（実質+${hitCount*C.B_UNIT_NET}発）</div>`:'';
+  const stText=stReset
+    ? `<div class="ms2" style="color:var(--gold);font-weight:bold">ST${stValue}にリセット！</div>`
+    : `<div class="ms2">ST${stValue}回転から再開</div>`;
   return `
     ${imgDiv('images/hozon_judge.png','ジャッジ結果\n画像プレースホルダー')}
     <div class="mt" style="color:${color}">${hitCount}/${C.STOCK_COUNT} 当たり</div>
     <div class="bm" style="font-size:26px;font-weight:bold;color:${color};margin:10px 0 4px">${title}</div>
     ${netText}
+    ${stText}
     <button class="bok" onclick="closeM()">続ける</button>`;
 }
 
@@ -497,15 +501,18 @@ async function runSenyouMode(){
   S.hits.stock[hitCount]++;
 
   if(hitCount===0){
+    let stReset;
     if(rand()<C.P_ZERO_RESET){
       S.rushST=C.RUSH_ST;
+      stReset=true;
       addH(`専用モード：はずれ（0/5）→ ST${C.RUSH_ST}にリセット`,'inv');
     } else {
       S.rushST=S.preDevST;
+      stReset=false;
       addH(`専用モード：はずれ（0/5）→ ST${S.preDevST}回転から再開`,'inv');
     }
     updS();
-    await showM(tmStockResult(0),'mn');
+    await showM(tmStockResult(0,stReset,S.rushST),'mn');
   } else {
     const gross=hitCount*C.B_UNIT_GROSS;
     const net=hitCount*C.B_UNIT_NET;
@@ -513,7 +520,7 @@ async function runSenyouMode(){
     S.rushST=C.RUSH_ST;
     addH(`専用モード：${hitCount}/5 当たり → ${gross}ボーナス（実質+${net}発）→ ST${C.RUSH_ST}にリセット`,'hit');
     updS();
-    await showM(tmStockResult(hitCount),'mn');
+    await showM(tmStockResult(hitCount,true,C.RUSH_ST),'mn');
   }
 }
 
