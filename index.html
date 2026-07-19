@@ -134,7 +134,7 @@ body{
         <div class="br" style="display:flex;justify-content:space-between"><span>専用モード はずれ(0/5)</span><span class="bv" id="thStock0">0回</span></div>
       </div>
     </div>
-    <div id="rushBadge" style="display:none;text-align:center;color:var(--gold);font-weight:bold;font-size:13px;margin-top:4px">RUSH中　残りST <span id="rushStVal">0</span></div>
+    <div id="rushBadge" style="display:none;text-align:center;color:var(--gold);font-weight:bold;font-size:13px;margin-top:4px">RUSH中　残りST <span id="rushStVal">0</span>　<span id="renchanVal">1</span>連チャン中</div>
   </div>
 
   <div id="ctrl">
@@ -287,7 +287,7 @@ function newState(w,reg,shop){
     reg, hist:[],
     pendingInvest:0,
     spinLimit:getSpinLimit(w), limitPassed:false,
-    rushActive:false, rushST:0, preDevST:0,
+    rushActive:false, rushST:0, preDevST:0, renchan:0, rushStock:[0,0,0,0,0,0],
   };
 }
 
@@ -302,6 +302,7 @@ function updS(){
   document.getElementById('tt').textContent=S.ttl;
   document.getElementById('rushBadge').style.display=S.rushActive?'block':'none';
   document.getElementById('rushStVal').textContent=S.rushST;
+  document.getElementById('renchanVal').textContent=S.renchan;
   document.getElementById('normalCtrl').style.display=S.rushActive?'none':'flex';
   document.getElementById('rushCtrl').style.display=S.rushActive?'flex':'none';
   document.getElementById('thFirst').textContent=`${S.hits.first}回`;
@@ -442,16 +443,30 @@ function tmRushResult(win){return win?`
   <div class="ms2">通常時へ戻ります</div>
   <button class="bok" onclick="closeM()">続ける</button>`;}
 
-function tmRushEnd(){return `
+function tmRushEnd(renchan,rushStock,totalBalls){
+  const rows=[1,2,3,4,5].map(n=>
+    `<div class="sr" style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span class="sk">${n*C.B_UNIT_GROSS}ボーナス</span><span class="sv2">${rushStock[n]}回</span></div>`
+  ).join('');
+  const units=totalBalls/C.B_UNIT_GROSS;
+  return `
   <div class="mt" style="color:#aaa">🌙 RUSH終了</div>
   <div class="ms2">STを使い切りました。通常時へ戻ります。</div>
+  <hr style="border-color:#333;margin:8px 0">
+  <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">連チャン数</span><span class="sv2" style="color:var(--gold);font-weight:bold">${renchan}連</span></div>
+  ${rows}
+  <hr style="border-color:#333;margin:8px 0">
+  <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">総獲得出玉</span><span class="sv2" style="color:var(--gold);font-weight:bold">${totalBalls.toLocaleString()}発（1500×${units}）</span></div>
   <button class="bok" onclick="closeM()">通常時へ</button>`;}
 
 async function endRush(){
   S.rushActive=false;
-  addH(`RUSH終了（ST消化）`,'inv');
+  const finalRenchan=S.renchan;
+  const rushStock=S.rushStock;
+  const totalBalls=rushStock.reduce((sum,cnt,hitCount)=>sum+cnt*hitCount*C.B_UNIT_GROSS,0);
+  addH(`RUSH終了（ST消化）　${finalRenchan}連チャンで終了`,'inv');
+  S.renchan=0;
   updS();
-  await showM(tmRushEnd(),'mn');
+  await showM(tmRushEnd(finalRenchan,rushStock,totalBalls),'mn');
   S.cur=0;
   updS();
 }
@@ -470,10 +485,11 @@ function tmJudgeButton(){return `
   <div class="mt" style="color:var(--gold)">保留5個 貯まりました！</div>
   <button class="bok" onclick="closeM()">ジャッジ！</button>`;}
 
-function tmStockResult(hitCount,stReset,stValue){
+function tmStockResult(hitCount,stReset,stValue,renchan){
   const color=hitCount>0?'var(--gold)':'#888';
   const title=hitCount>0?`${hitCount*C.B_UNIT_GROSS}ボーナス！`:'はずれ…';
   const netText=hitCount>0?`<div class="bs" style="font-size:14px;color:#aaa;margin-bottom:12px">（実質+${hitCount*C.B_UNIT_NET}発）</div>`:'';
+  const renchanText=hitCount>0?`<div class="ms2" style="color:var(--gold)">${renchan}連目！</div>`:'';
   const stText=stReset
     ? `<div class="ms2" style="color:var(--gold);font-weight:bold">ST${stValue}にリセット！</div>`
     : `<div class="ms2">ST${stValue}回転から再開</div>`;
@@ -482,6 +498,7 @@ function tmStockResult(hitCount,stReset,stValue){
     <div class="mt" style="color:${color}">${hitCount}/${C.STOCK_COUNT} 当たり</div>
     <div class="bm" style="font-size:26px;font-weight:bold;color:${color};margin:10px 0 4px">${title}</div>
     ${netText}
+    ${renchanText}
     ${stText}
     <button class="bok" onclick="closeM()">続ける</button>`;
 }
@@ -499,6 +516,7 @@ async function runSenyouMode(){
     if(rand()<C.P_STOCK_HIT) hitCount++;
   }
   S.hits.stock[hitCount]++;
+  S.rushStock[hitCount]++;
 
   if(hitCount===0){
     let stReset;
@@ -518,9 +536,10 @@ async function runSenyouMode(){
     const net=hitCount*C.B_UNIT_NET;
     award(net);
     S.rushST=C.RUSH_ST;
-    addH(`専用モード：${hitCount}/5 当たり → ${gross}ボーナス（実質+${net}発）→ ST${C.RUSH_ST}にリセット`,'hit');
+    S.renchan++;
+    addH(`専用モード：${hitCount}/5 当たり → ${gross}ボーナス（実質+${net}発）→ ST${C.RUSH_ST}にリセット（${S.renchan}連目）`,'hit');
     updS();
-    await showM(tmStockResult(hitCount,true,C.RUSH_ST),'mn');
+    await showM(tmStockResult(hitCount,true,C.RUSH_ST,S.renchan),'mn');
   }
 }
 
@@ -539,6 +558,7 @@ async function runNormalWinChain(){
 
   award(C.B_UNIT_NET);
   S.hits.first++;
+  S.renchan=1;
   updS();
   await showM(tmHatsuAtari(),'mn');
   addH(`${spin0}回転目：先バレ→ジャッジ→初回大当たり(1500) → 実質+${C.B_UNIT_NET}発`,'hit');
@@ -549,6 +569,7 @@ async function runNormalWinChain(){
     S.hits.rushSuccess++;
     S.rushActive=true;
     S.rushST=C.RUSH_ST;
+    S.rushStock=[0,0,0,0,0,0];
     updS();
     await showM(tmRushResult(true),'mn');
   } else {
