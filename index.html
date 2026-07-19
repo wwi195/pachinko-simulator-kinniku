@@ -38,7 +38,8 @@ body{
 .bok:active{transform:scale(.97);}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
 #ov.h{display:none;}
-#mb{width:100%;max-width:400px;max-height:90vh;overflow-y:auto;border-radius:16px;padding:22px;text-align:center;}
+#mb{width:100%;max-width:400px;max-height:90vh;overflow-y:auto;border-radius:16px;padding:22px;text-align:center;animation:mbPop .32s cubic-bezier(.34,1.56,.64,1);}
+@keyframes mbPop{from{opacity:0;transform:translateY(14px) scale(.94);}to{opacity:1;transform:translateY(0) scale(1);}}
 .mn{background:var(--panel2);border:2px solid var(--gold);}
 .mt{font-size:22px;font-weight:bold;margin-bottom:6px;}
 .ms2{font-size:13px;color:var(--dim);margin-bottom:12px;}
@@ -214,6 +215,9 @@ function showM(html,theme){
   ov.style.background='';
   box.className=theme||'mn'; box.innerHTML=html;
   ov.classList.remove('h');
+  box.style.animation='none';
+  void box.offsetWidth; // force reflow so mbPop replays on every screen change, not just the first
+  box.style.animation='';
   _modalLock=true;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{_modalLock=false;}));
   return new Promise(r=>{_res=r;});
@@ -389,8 +393,13 @@ async function handleClosingTime(){
    NORMAL-MODE WIN CHAIN — 先バレ→レバブル→Vフラ→ジャッジ→
    初回1500発→RUSHチャレンジ
 ============================================================ */
+function imgFallback(imgEl){
+  imgEl.style.display='none';
+  imgEl.parentElement.innerHTML=imgEl.dataset.fallback.replace(/\n/g,'<br>');
+}
 function imgDiv(src,fallback){
-  return `<div class="pi" style="width:100%;max-width:300px;height:130px;background:#181818;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#444;font-size:11px;line-height:1.6;text-align:center;margin:0 auto 14px;border:1px dashed #333"><img src="${src}" alt="" style="max-width:100%;max-height:100%;width:auto;height:auto;border-radius:8px" onload="this.parentElement.style.border='none';this.parentElement.style.background='transparent'" onerror="this.style.display='none';this.parentElement.textContent='${fallback}'"></div>`;
+  const safeFallback=fallback.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  return `<div class="pi" style="width:100%;max-width:300px;height:130px;background:#181818;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#444;font-size:11px;line-height:1.6;text-align:center;margin:0 auto 14px;border:1px dashed #333"><img src="${src}" alt="" data-fallback="${safeFallback}" style="max-width:100%;max-height:100%;width:auto;height:auto;border-radius:8px" onload="this.parentElement.style.border='none';this.parentElement.style.background='transparent'" onerror="imgFallback(this)"></div>`;
 }
 
 function tmSenbare(spin){return `
