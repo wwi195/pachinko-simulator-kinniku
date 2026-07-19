@@ -565,10 +565,9 @@ async function runNormalWinChain(){
    RUSH added in Task 5/6 — for now, normal mode always misses)
 ============================================================ */
 async function oneSpin(){
-  if(!ensureBalls()) return {over:true};
-  consume(); updS();
-
   if(S.rushActive){
+    // RUSH/ST中は電サポで玉が減らない仕様 — 回転数だけ進める
+    S.cur++; S.ttl++; updS();
     S.rushST--;
     if(rand()<C.P_HATTEN){
       addH(`${S.ttl}回転目：発展！`,'hit');
@@ -581,6 +580,9 @@ async function oneSpin(){
     }
     return {ok:true};
   }
+
+  if(!ensureBalls()) return {over:true};
+  consume(); updS();
 
   if(rand()<C.P_HIT){
     flushInvest();
