@@ -468,6 +468,7 @@ function tmSenyouIn(){return `
   <button class="bok" onclick="closeM()">次へ →</button>`;}
 
 function tmStockFill(n){return `
+  ${imgDiv('images/hozon_stock.png','保留貯め演出\n画像プレースホルダー')}
   <div class="mt" style="color:var(--gold)">保留 ${n}/${C.STOCK_COUNT}</div>
   <div class="ms2">保留を貯めています…</div>
   <button class="bok" onclick="closeM()">次へ →</button>`;}
@@ -481,6 +482,7 @@ function tmStockResult(hitCount){
   const title=hitCount>0?`${hitCount*C.B_UNIT_GROSS}ボーナス！`:'はずれ…';
   const netText=hitCount>0?`<div class="bs" style="font-size:14px;color:#aaa;margin-bottom:12px">（実質+${hitCount*C.B_UNIT_NET}発）</div>`:'';
   return `
+    ${imgDiv('images/hozon_judge.png','ジャッジ結果\n画像プレースホルダー')}
     <div class="mt" style="color:${color}">${hitCount}/${C.STOCK_COUNT} 当たり</div>
     <div class="bm" style="font-size:26px;font-weight:bold;color:${color};margin:10px 0 4px">${title}</div>
     ${netText}
