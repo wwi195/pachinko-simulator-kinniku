@@ -116,7 +116,10 @@ body{
       <button class="mb brush10" id="btnR10" onclick="doRushSpin10()">10回転</button>
       <button class="mb brushskip" id="btnRSkip" onclick="doRushSkip()">次発展まで</button>
     </div>
-    <button class="mb brt" id="btnr" onclick="doRetire()">退店</button>
+    <div class="spinRow">
+      <button class="mb brt" id="btnr" onclick="doRetire()" style="flex:1">退店</button>
+      <button class="mb brt" id="btnRank" onclick="showRanking()" style="flex:1">🏆 ランキング</button>
+    </div>
   </div>
 
   <div id="hw">
@@ -315,7 +318,8 @@ function tmClosingTime(){return `
   <div class="mt" style="color:var(--gold)">🕐 閉店時間になりました</div>
   <div class="ms2" style="line-height:1.8">
     通常時 <strong style="color:var(--text)">${S.spinLimit}回転</strong> に達しました。<br>
-    闇パチに移動しますか？（非合法オールナイト営業へ）
+    闇パチに移動しますか？（非合法オールナイト営業へ）<br><br>
+    <span style="color:#f87171">※闇パチへ進むと、ここまでの出玉は最高出玉ランキングの対象外になります</span>
   </div>
   <div style="display:flex;gap:10px;margin-top:12px">
     <button class="bok" style="flex:1;background:#1e1e1e;color:#999;border:1px solid #444" onclick="chooseRetire()">いいえ（退店する）</button>
@@ -333,6 +337,46 @@ function tmAfterClosing(){return `
 
 function chooseRetire(){_closingChoice='retire';closeM();}
 function chooseContinue(){_closingChoice='continue';closeM();}
+
+/* ============================================================
+   RANKING — 所持金以内または2800回転（闇パチ移行前）で退店した
+   時点の持ち玉数を、上位10件までブラウザのlocalStorageに保存する。
+============================================================ */
+const RANK_KEY='kinnikuRankingV1';
+function loadRanking(){
+  try{
+    const raw=localStorage.getItem(RANK_KEY);
+    return raw?JSON.parse(raw):[];
+  }catch(e){ return []; }
+}
+function saveRanking(list){
+  try{ localStorage.setItem(RANK_KEY, JSON.stringify(list)); }catch(e){}
+}
+function recordRanking(balls){
+  const list=loadRanking();
+  const d=new Date();
+  const entry={balls, date:`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`};
+  list.push(entry);
+  list.sort((a,b)=>b.balls-a.balls);
+  const trimmed=list.slice(0,10);
+  saveRanking(trimmed);
+  return {list:trimmed, entry, madeList:trimmed.includes(entry)};
+}
+function renderRankingList(list, highlightEntry){
+  if(list.length===0) return `<div class="ms2" style="text-align:center">まだ記録がありません</div>`;
+  return list.map((r,i)=>{
+    const isNew=r===highlightEntry;
+    return `<div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px${isNew?';color:var(--gold);font-weight:bold':''}"><span class="sk">${i+1}位${isNew?' 🆕':''}</span><span class="sv2">${r.balls.toLocaleString()}玉 <span style="font-size:10px;color:var(--dim)">${r.date}</span></span></div>`;
+  }).join('');
+}
+function showRanking(){
+  const html=`
+    <div class="mt" style="color:var(--gold)">🏆 最高出玉ランキング</div>
+    <div class="ms2">所持金以内・2800回転（闇パチ移行前）での記録</div>
+    ${renderRankingList(loadRanking())}
+    <button class="bok" onclick="closeM()" style="margin-top:14px">閉じる</button>`;
+  showM(html,'mn');
+}
 
 async function handleClosingTime(){
   if(!S.spinLimit||S.limitPassed||S.ttl<S.spinLimit||S.rushActive) return false;
@@ -740,6 +784,23 @@ function showSettle(){
   const outRate=S.investB>0?Math.round(Math.floor(S.balls)/S.investB*100):0;
   const plColor=finalPL>=0?'#22c55e':'#ef4444';
   const plSign=finalPL>=0?'+':'';
+
+  // 闇パチ（居座り継続）を経由した場合はランキング対象外。
+  let rankHtml;
+  if(S.limitPassed){
+    rankHtml=`
+      <hr style="border-color:#333;margin:8px 0">
+      <div class="mt" style="font-size:16px;color:var(--gold)">🏆 最高出玉ランキング</div>
+      <div class="ms2" style="color:#888">闇パチを経由したため今回は対象外です</div>`;
+  } else {
+    const {list, entry, madeList}=recordRanking(Math.floor(S.balls));
+    rankHtml=`
+      <hr style="border-color:#333;margin:8px 0">
+      <div class="mt" style="font-size:16px;color:var(--gold)">🏆 最高出玉ランキング</div>
+      ${madeList?'<div class="ms2" style="color:var(--gold)">ランクイン！</div>':''}
+      ${renderRankingList(list, entry)}`;
+  }
+
   const html=`
     <div class="mt" style="color:var(--gold)">精算</div>
     <hr style="border-color:#333;margin:8px 0">
@@ -756,6 +817,7 @@ function showSettle(){
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">RUSHチャレンジ成功/失敗</span><span class="sv2">${S.hits.rushSuccess}/${S.hits.rushFail}</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">専用モード 5/5〜0/5</span><span class="sv2">${S.hits.stock[5]}/${S.hits.stock[4]}/${S.hits.stock[3]}/${S.hits.stock[2]}/${S.hits.stock[1]}/${S.hits.stock[0]}</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">出玉率</span><span class="sv2" style="color:${outRate>=100?'#22c55e':'#ef4444'}">${outRate}%</span></div>
+    ${rankHtml}
     <div style="margin-top:18px;text-align:center">
       <button class="bok" onclick="location.reload()">もう一度遊ぶ</button>
     </div>`;
