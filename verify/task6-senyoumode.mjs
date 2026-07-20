@@ -18,8 +18,8 @@ async function clickThroughModal(page) {
 }
 
 async function enterRushAndHatten(page, stockQueue) {
-  // hit, senbare shown, no levaburu/vfla, rush entry success, hatten immediately
-  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, ...stockQueue]);
+  // hit, senbare shown, no levaburu/vfla, reliability-win, rush entry success, hatten immediately
+  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, 0.0001, ...stockQueue]);
   await page.click('#btn1');
   // win chain produces exactly 5 modals: 先バレ, judge, bonus(初回大当たり),
   // RUSHチャレンジ, RUSH突入 result -- matching task5-rushloop.mjs scenario A/B.

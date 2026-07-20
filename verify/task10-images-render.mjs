@@ -27,7 +27,8 @@ async function checkImgLoaded(page, label) {
   console.log(`OK: ${label} loaded (${result.src}, naturalWidth=${result.natW})`);
 }
 
-// hit -> senbare -> levaburu(img) -> vfla(img) -> judge(no img) -> bonus -> rushChallenge -> rush_in(img)
+// hit -> senbare -> levaburu(img) -> vfla(img) -> judge(no img) -> reliability-win ->
+// bonus -> (vfla bypasses RUSHチャレンジ) -> rush_in(img)
 {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -40,8 +41,7 @@ async function checkImgLoaded(page, label) {
   await checkImgLoaded(page, 'vfla');
   await clickThroughModal(page); // vfla -> judge (no image)
   await clickThroughModal(page); // judge -> bonus
-  await clickThroughModal(page); // bonus -> RUSHチャレンジ
-  await clickThroughModal(page); // RUSHチャレンジ -> result (forced win)
+  await clickThroughModal(page); // bonus -> RUSH突入 result (vfla guarantees RUSH, no challenge modal)
   await checkImgLoaded(page, 'rush_in');
 
   await browser.close();
@@ -51,7 +51,7 @@ async function checkImgLoaded(page, label) {
 {
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, 0.01,0.01,0.9,0.01,0.9]);
+  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, 0.0001, 0.01,0.01,0.9,0.01,0.9]);
 
   await page.click('#btn1');
   for (let i = 0; i < 5; i++) await clickThroughModal(page); // -> RUSH active

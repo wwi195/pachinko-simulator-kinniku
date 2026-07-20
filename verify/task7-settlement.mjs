@@ -9,8 +9,8 @@ const url = 'file://' + path.join(dir, '..', 'index.html');
 const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.goto(url);
-// hit, senbare shown, no levaburu/vfla, rush entry success
-await page.evaluate(q => window.__TEST__.setRandomQueue(q), [0.0001, 0.0001, 0.99, 0.99, 0.0001]);
+// hit, senbare shown, no levaburu/vfla, reliability-win, rush entry success
+await page.evaluate(q => window.__TEST__.setRandomQueue(q), [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001]);
 await page.waitForSelector('#game.active');
 
 await page.click('#btn1');

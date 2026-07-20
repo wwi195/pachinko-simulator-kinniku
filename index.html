@@ -193,9 +193,10 @@ Object.assign(C,{
   P_HIT: 1/399.9,
   B_UNIT_GROSS: 1500,
   B_UNIT_NET: 1400,
-  P_SENBARE: 0.90,     // 先バレ演出発生率
-  P_LEVABURU: 0.95,    // 大当たり時のレバブル発生率
-  P_VFLA: 0.15,         // 図柄揃い時のRUSH(50%)のうち30%で発生 = 0.5*0.3
+  P_SENBARE: 0.90,     // 先バレ演出発生率、かつ先バレ止まり時の信頼度
+  P_LEVABURU: 0.95,    // レバブル演出発生率、かつレバブル止まり時の信頼度
+  P_VFLA: 0.15,         // 図柄揃い時のRUSH(50%)のうち30%で発生 = 0.5*0.3。発生時の信頼度は100%
+  P_RELIABILITY_NONE: 0.50, // 先バレ/レバブル/Vフラいずれも発生しなかった場合の信頼度
   P_RUSH_ENTRY: 0.50,
   RUSH_ST: 145,
   P_HATTEN: 1/92.3,
@@ -375,6 +376,11 @@ function tmJudge(){return `
   <div class="mt" style="color:var(--ring)">⚖️ JUDGE</div>
   <button class="bok" onclick="closeM()">JUDGE！</button>`;}
 
+function tmMiss(){return `
+  <div class="mt" style="color:#888">😢 残念…</div>
+  <div class="ms2">当たりならず</div>
+  <button class="bok" onclick="closeM()">続ける</button>`;}
+
 function tmHatsuAtari(){return `
   <div class="mt" style="color:var(--gold)">🏆 1500ボーナス！</div>
   <div class="bm" style="font-size:26px;font-weight:bold;color:var(--gold);margin:10px 0 4px">1500ボーナス！</div>
@@ -515,20 +521,34 @@ async function runSenyouMode(){
 
 async function runNormalWinChain(){
   const spin0=S.cur;
-  S.hits.total++;
   const senbare=rand()<C.P_SENBARE;
   if(senbare){
     await showM(tmSenbare(spin0),'mn');
   }
 
-  if(rand()<C.P_LEVABURU){
+  const levaburu=rand()<C.P_LEVABURU;
+  if(levaburu){
     await showM(tmLevaburu(),'mn');
   }
-  if(rand()<C.P_VFLA){
+  const vfla=rand()<C.P_VFLA;
+  if(vfla){
     await showM(tmVfla(),'mn');
   }
   await showM(tmJudge(),'mn');
 
+  // 信頼度は一番強い演出（Vフラ>レバブル>先バレ）だけで決まる。どれも
+  // 出なかった場合は P_RELIABILITY_NONE を使う。
+  const reliability=vfla?1:levaburu?C.P_LEVABURU:senbare?C.P_SENBARE:C.P_RELIABILITY_NONE;
+  const isWin=rand()<reliability;
+
+  if(!isWin){
+    addH(`${spin0}回転目：${senbare?'先バレ→':''}ジャッジ→残念、当たりならず`,'inv');
+    await showM(tmMiss(),'mn');
+    updS();
+    return;
+  }
+
+  S.hits.total++;
   award(C.B_UNIT_NET);
   S.hits.first++;
   S.renchan=1;
@@ -536,9 +556,8 @@ async function runNormalWinChain(){
   await showM(tmHatsuAtari(),'mn');
   addH(`${spin0}回転目：${senbare?'先バレ→':''}ジャッジ→初回大当たり(1500) → 実質+${C.B_UNIT_NET}発`,'hit');
 
-  await showM(tmRushChallenge(),'mn');
-  const rushWin=rand()<C.P_RUSH_ENTRY;
-  if(rushWin){
+  if(vfla){
+    // Vフラは確実に当たり＋RUSH突入。チャレンジ抽選なしで直接RUSHへ。
     S.hits.rushSuccess++;
     S.rushActive=true;
     S.rushST=C.RUSH_ST;
@@ -546,9 +565,20 @@ async function runNormalWinChain(){
     updS();
     await showM(tmRushResult(true),'mn');
   } else {
-    S.hits.rushFail++;
-    updS();
-    await showM(tmRushResult(false),'mn');
+    await showM(tmRushChallenge(),'mn');
+    const rushWin=rand()<C.P_RUSH_ENTRY;
+    if(rushWin){
+      S.hits.rushSuccess++;
+      S.rushActive=true;
+      S.rushST=C.RUSH_ST;
+      S.rushStock=[0,0,0,0,0,0];
+      updS();
+      await showM(tmRushResult(true),'mn');
+    } else {
+      S.hits.rushFail++;
+      updS();
+      await showM(tmRushResult(false),'mn');
+    }
   }
   S.cur=0;
   updS();

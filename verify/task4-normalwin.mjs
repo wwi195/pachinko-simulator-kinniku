@@ -21,8 +21,8 @@ async function clickThroughModal(page) {
 {
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  // queue: [P_HIT hit, P_SENBARE show, P_LEVABURU show, P_VFLA skip, P_RUSH_ENTRY win]
-  await setup(page, [0.0001, 0.0001, 0.0001, 0.99, 0.0001]);
+  // queue: [P_HIT hit, P_SENBARE show, P_LEVABURU show, P_VFLA skip, reliability-win, P_RUSH_ENTRY win]
+  await setup(page, [0.0001, 0.0001, 0.0001, 0.99, 0.0001, 0.0001]);
 
   await page.click('#btn1'); // triggers the hit; first modal (先バレ) is up
   await clickThroughModal(page); // 先バレ -> レバブル modal appears
@@ -56,7 +56,8 @@ async function clickThroughModal(page) {
 {
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.99]);
+  // queue: [P_HIT hit, P_SENBARE show, P_LEVABURU skip, P_VFLA skip, reliability-win, P_RUSH_ENTRY fail]
+  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.99]);
 
   await page.click('#btn1');
   await clickThroughModal(page); // 先バレ -> judge (both skipped)

@@ -24,7 +24,7 @@ async function clickThroughModal(page) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const missQueue = new Array(200).fill(0.99);
-  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, ...missQueue]);
+  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, ...missQueue]);
 
   await page.click('#btn1');
   await clickThroughModal(page); // 先バレ -> judge
@@ -53,7 +53,7 @@ async function clickThroughModal(page) {
 {
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, 0.9,0.9,0.9,0.9,0.9, 0.0001]);
+  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, 0.0001, 0.9,0.9,0.9,0.9,0.9, 0.0001]);
 
   await page.click('#btn1');
   await clickThroughModal(page);

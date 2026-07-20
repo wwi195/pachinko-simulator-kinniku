@@ -18,7 +18,7 @@ async function clickThroughModal(page) {
 }
 
 async function enterRushAndHatten(page, stockQueue) {
-  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, ...stockQueue]);
+  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, 0.0001, ...stockQueue]);
   await page.click('#btn1');
   for (let i = 0; i < 5; i++) await clickThroughModal(page); // -> RUSH active
   await page.click('#btnR1');
