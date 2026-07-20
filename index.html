@@ -67,6 +67,15 @@ body{
 .circ .ct{font-size:13px;line-height:1.3;}
 .b1{background:linear-gradient(135deg,#1a3a6b,#2563eb,#1a3a6b);}
 .b100{background:linear-gradient(135deg,#6b1a1a,#dc2626,#6b1a1a);}
+@keyframes btnPress{
+  0%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,0);}
+  35%{transform:scale(.88);box-shadow:0 0 0 3px var(--fxglow),0 0 22px 6px var(--fxglow);}
+  70%{transform:scale(1.08);box-shadow:0 0 0 1px var(--fxglow),0 0 10px 2px var(--fxglow);}
+  100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,0);}
+}
+.btnPress{animation:btnPress .38s cubic-bezier(.34,1.56,.64,1);}
+.b1.btnPress{--fxglow:rgba(96,165,250,.85);}
+.b100.btnPress{--fxglow:rgba(248,113,113,.85);}
 .brush1,.brush10,.brushskip{flex:1;background:linear-gradient(135deg,#7a0000,#c81e1e,#ffd700,#7a0000);padding:14px 4px;font-size:13px;}
 .brt{width:100%;max-width:380px;border-radius:14px;background:var(--panel2);border:1px solid #444;color:var(--dim);font-size:13px;padding:9px;max-width:200px;}
 #hw{flex:1;overflow-y:auto;padding:8px 12px 20px;}
@@ -111,7 +120,7 @@ body{
     <div class="stats-grid">
       <div class="sb"><span class="sl">投資額：</span><span class="sv neg" id="ti">¥0</span></div>
       <div class="sb"><span class="sl">現金残高：</span><span class="sv gold" id="tw">¥0</span></div>
-      <div class="sb" style="grid-column:span 2;justify-content:center;gap:10px"><span class="sl">持ち玉：</span><span class="sv" id="tb" style="color:var(--cyan)">0</span></div>
+      <div class="sb" style="grid-column:span 2;justify-content:center;gap:10px"><span class="sl">持ち玉：</span><span class="sv" id="tb" style="color:var(--cyan)">0</span><span class="sl" id="plApprox" style="font-size:12px">（収支：¥0）</span></div>
       <div class="sb"><span class="sl">スタート：</span><span class="sv" id="tc">0</span></div>
       <div class="sb"><span class="sl">総回転数：</span><span class="sv" id="tt">0</span></div>
     </div>
@@ -124,6 +133,8 @@ body{
       <button class="bbToggle" id="bbToggleBtn" onclick="toggleDetail()" style="width:100%;background:var(--panel);border:1px solid #333;color:var(--gold);font-size:11px;padding:6px;border-radius:6px;margin-bottom:4px;cursor:pointer;letter-spacing:1px">▶ 詳細を見る</button>
       <div class="bbDetail" id="bbDetail" style="display:none;font-size:10px;color:var(--dim)">
         <div class="br" style="display:flex;justify-content:space-between"><span>初回大当たり</span><span class="bv" id="thFirst">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>チャージ発生</span><span class="bv" id="thCharge">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>チャージ→RUSH突入</span><span class="bv" id="thChargeRush">0回</span></div>
         <div class="br" style="display:flex;justify-content:space-between"><span>RUSHチャレンジ成功</span><span class="bv" id="thRushOk">0回</span></div>
         <div class="br" style="display:flex;justify-content:space-between"><span>RUSHチャレンジ失敗</span><span class="bv" id="thRushNg">0回</span></div>
         <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 5/5</span><span class="bv" id="thStock5">0回</span></div>
@@ -250,14 +261,18 @@ Object.assign(C,{
   P_HIT: 1/399.9,
   B_UNIT_GROSS: 1500,
   B_UNIT_NET: 1400,
-  P_LEVABURU: 0.30,   // TODO: 仮値。正式値が来たら差し替える
-  P_VFLA: 0.15,        // TODO: 仮値。正式値が来たら差し替える
+  P_SENBARE: 0.90,     // 先バレ演出発生率
+  P_LEVABURU: 0.95,    // 大当たり時のレバブル発生率
+  P_VFLA: 0.15,         // 図柄揃い時のRUSH(50%)のうち30%で発生 = 0.5*0.3
   P_RUSH_ENTRY: 0.50,
   RUSH_ST: 145,
   P_HATTEN: 1/92.3,
   P_STOCK_HIT: 1/2.8,
   STOCK_COUNT: 5,
   P_ZERO_RESET: 0.50,
+  P_CHARGE: 1/2706,
+  CHARGE_AWARD: 280,
+  P_CHARGE_RUSH: 0.03,
 });
 
 /* ============================================================
@@ -280,6 +295,8 @@ function newState(w,reg,shop){
       rushSuccess:0,
       rushFail:0,
       stock:[0,0,0,0,0,0], // index = 専用モードでの当たり数(0〜5)、値=発生回数
+      charge:0,
+      chargeRush:0,
     },
     cur:0, ttl:0,
     spk, bps:C.BPK/spk,
@@ -297,6 +314,11 @@ function updS(){
   document.getElementById('ti').textContent=S.cashUsed>0?`−¥${S.cashUsed.toLocaleString()}`:'¥0';
   document.getElementById('tw').textContent=`¥${S.wallet.toLocaleString()}`;
   document.getElementById('tb').textContent=Math.floor(S.balls).toLocaleString();
+  const approxExch=floor500(Math.floor(S.balls)*S.exRate);
+  const approxPL=Math.round(approxExch-S.cashUsed);
+  const plEl=document.getElementById('plApprox');
+  plEl.textContent=`（収支：${approxPL>=0?'+':'−'}¥${Math.abs(approxPL).toLocaleString()}）`;
+  plEl.style.color=approxPL>=0?'var(--green)':'var(--red)';
   document.getElementById('tht').textContent=S.hits.total;
   document.getElementById('tc').textContent=S.cur;
   document.getElementById('tt').textContent=S.ttl;
@@ -306,6 +328,8 @@ function updS(){
   document.getElementById('normalCtrl').style.display=S.rushActive?'none':'flex';
   document.getElementById('rushCtrl').style.display=S.rushActive?'flex':'none';
   document.getElementById('thFirst').textContent=`${S.hits.first}回`;
+  document.getElementById('thCharge').textContent=`${S.hits.charge}回`;
+  document.getElementById('thChargeRush').textContent=`${S.hits.chargeRush}回`;
   document.getElementById('thRushOk').textContent=`${S.hits.rushSuccess}回`;
   document.getElementById('thRushNg').textContent=`${S.hits.rushFail}回`;
   document.getElementById('thStock5').textContent=`${S.hits.stock[5]}回`;
@@ -419,7 +443,6 @@ function tmVfla(){return `
   <button class="bok" onclick="closeM()">ジャッジへ →</button>`;}
 
 function tmJudge(){return `
-  ${imgDiv('images/judge.png','JUDGE\n画像プレースホルダー')}
   <div class="mt" style="color:var(--ring)">⚖️ JUDGE</div>
   <button class="bok" onclick="closeM()">JUDGE！</button>`;}
 
@@ -472,18 +495,33 @@ async function endRush(){
 }
 
 function tmSenyouIn(){return `
-  <div class="mt" style="color:var(--ring)">🔥 専用モード突入！</div>
+  ${imgDiv('images/senyou_in.png','専用モード突入\n画像プレースホルダー')}
+  <div class="mt" style="color:var(--ring)">🔥 チャンス！保留チャージ！</div>
   <button class="bok" onclick="closeM()">次へ →</button>`;}
 
 function tmStockFill(n){return `
-  ${imgDiv('images/hozon_stock.png','保留貯め演出\n画像プレースホルダー')}
   <div class="mt" style="color:var(--gold)">保留 ${n}/${C.STOCK_COUNT}</div>
   <div class="ms2">保留を貯めています…</div>
   <button class="bok" onclick="closeM()">次へ →</button>`;}
 
 function tmJudgeButton(){return `
+  ${imgDiv('images/hozon_judge.png','ジャッジ\n画像プレースホルダー')}
   <div class="mt" style="color:var(--gold)">保留5個 貯まりました！</div>
   <button class="bok" onclick="closeM()">ジャッジ！</button>`;}
+
+function tmAtariIn(){return `
+  ${imgDiv('images/soroi.png','図柄揃い\n画像プレースホルダー')}
+  <div class="mt" style="color:var(--gold)">🎯 あたり</div>
+  <button class="bok" onclick="closeM()">バトル開始</button>`;}
+
+function tmVImage(hitCount){
+  const vLabel=(hitCount-1)*C.B_UNIT_GROSS;
+  const src=`images/v${vLabel}.png`;
+  return `
+  ${imgDiv(src,'V'+vLabel+'\n画像プレースホルダー')}
+  <div class="mt" style="color:var(--gold)">V${vLabel}!</div>
+  <button class="bok" onclick="closeM()">次へ →</button>`;
+}
 
 function tmStockResult(hitCount,stReset,stValue,renchan){
   const color=hitCount>0?'var(--gold)':'#888';
@@ -494,7 +532,6 @@ function tmStockResult(hitCount,stReset,stValue,renchan){
     ? `<div class="ms2" style="color:var(--gold);font-weight:bold">ST${stValue}にリセット！</div>`
     : `<div class="ms2">ST${stValue}回転から再開</div>`;
   return `
-    ${imgDiv('images/hozon_judge.png','ジャッジ結果\n画像プレースホルダー')}
     <div class="mt" style="color:${color}">${hitCount}/${C.STOCK_COUNT} 当たり</div>
     <div class="bm" style="font-size:26px;font-weight:bold;color:${color};margin:10px 0 4px">${title}</div>
     ${netText}
@@ -539,6 +576,10 @@ async function runSenyouMode(){
     S.renchan++;
     addH(`専用モード：${hitCount}/5 当たり → ${gross}ボーナス（実質+${net}発）→ ST${C.RUSH_ST}にリセット（${S.renchan}連目）`,'hit');
     updS();
+    await showM(tmAtariIn(),'mn');
+    if(hitCount>=2){
+      await showM(tmVImage(hitCount),'mn');
+    }
     await showM(tmStockResult(hitCount,true,C.RUSH_ST,S.renchan),'mn');
   }
 }
@@ -546,7 +587,10 @@ async function runSenyouMode(){
 async function runNormalWinChain(){
   const spin0=S.cur;
   S.hits.total++;
-  await showM(tmSenbare(spin0),'mn');
+  const senbare=rand()<C.P_SENBARE;
+  if(senbare){
+    await showM(tmSenbare(spin0),'mn');
+  }
 
   if(rand()<C.P_LEVABURU){
     await showM(tmLevaburu(),'mn');
@@ -561,7 +605,7 @@ async function runNormalWinChain(){
   S.renchan=1;
   updS();
   await showM(tmHatsuAtari(),'mn');
-  addH(`${spin0}回転目：先バレ→ジャッジ→初回大当たり(1500) → 実質+${C.B_UNIT_NET}発`,'hit');
+  addH(`${spin0}回転目：${senbare?'先バレ→':''}ジャッジ→初回大当たり(1500) → 実質+${C.B_UNIT_NET}発`,'hit');
 
   await showM(tmRushChallenge(),'mn');
   const rushWin=rand()<C.P_RUSH_ENTRY;
@@ -576,6 +620,33 @@ async function runNormalWinChain(){
     S.hits.rushFail++;
     updS();
     await showM(tmRushResult(false),'mn');
+  }
+  S.cur=0;
+  updS();
+}
+
+function tmCharge(){return `
+  <div class="mt" style="color:var(--cyan)">⚡ チャージ発生！</div>
+  <div class="ms2">${C.CHARGE_AWARD}発獲得です</div>
+  <button class="bok" onclick="closeM()">次へ →</button>`;}
+
+async function runChargeEvent(){
+  award(C.CHARGE_AWARD);
+  S.hits.charge++;
+  updS();
+  await showM(tmCharge(),'mn');
+  addH(`${S.cur}回転目：チャージ発生 → +${C.CHARGE_AWARD}発`,'hit');
+
+  const rushWin=rand()<C.P_CHARGE_RUSH;
+  if(rushWin){
+    S.hits.chargeRush++;
+    S.rushActive=true;
+    S.rushST=C.RUSH_ST;
+    S.rushStock=[0,0,0,0,0,0];
+    S.renchan=1;
+    updS();
+    await showM(tmRushResult(true),'mn');
+    addH(`チャージからRUSH突入！`,'hit');
   }
   S.cur=0;
   updS();
@@ -610,11 +681,23 @@ async function oneSpin(){
     await runNormalWinChain();
     return {stopped:true};
   }
+  if(rand()<C.P_CHARGE){
+    flushInvest();
+    await runChargeEvent();
+    return {stopped:true};
+  }
   return {ok:true};
+}
+
+function pressFx(el){
+  el.classList.remove('btnPress');
+  void el.offsetWidth; // force reflow so the animation replays on rapid re-clicks
+  el.classList.add('btnPress');
 }
 
 async function doSpin1(){
   if(_busy) return;
+  pressFx(document.getElementById('btn1'));
   _busy=true; lockAll(true);
   const r=await oneSpin();
   _busy=false; lockAll(false);
@@ -625,6 +708,7 @@ async function doSpin1(){
 
 async function doSpin100(){
   if(_busy) return;
+  pressFx(document.getElementById('btn100'));
   _busy=true; lockAll(true);
   let over=false;
   for(let i=0;i<100;i++){
@@ -702,6 +786,7 @@ function showSettle(){
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">総回転数</span><span class="sv2">${S.ttl}回</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">大当たり合計</span><span class="sv2">${S.hits.total}回</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">初回大当たり</span><span class="sv2">${S.hits.first}回</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">チャージ発生/→RUSH突入</span><span class="sv2">${S.hits.charge}/${S.hits.chargeRush}</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">RUSHチャレンジ成功/失敗</span><span class="sv2">${S.hits.rushSuccess}/${S.hits.rushFail}</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">専用モード 5/5〜0/5</span><span class="sv2">${S.hits.stock[5]}/${S.hits.stock[4]}/${S.hits.stock[3]}/${S.hits.stock[2]}/${S.hits.stock[1]}/${S.hits.stock[0]}</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">出玉率</span><span class="sv2" style="color:${outRate>=100?'#22c55e':'#ef4444'}">${outRate}%</span></div>

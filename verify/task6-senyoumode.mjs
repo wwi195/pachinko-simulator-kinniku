@@ -22,8 +22,8 @@ async function clickThroughModal(page) {
 }
 
 async function enterRushAndHatten(page, stockQueue) {
-  // hit, no levaburu/vfla, rush entry success, hatten immediately
-  await setup(page, [0.0001, 0.99, 0.99, 0.0001, 0.0001, ...stockQueue]);
+  // hit, senbare shown, no levaburu/vfla, rush entry success, hatten immediately
+  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001, ...stockQueue]);
   await page.click('#btn1');
   // win chain produces exactly 5 modals: 先バレ, judge, bonus(初回大当たり),
   // RUSHチャレンジ, RUSH突入 result -- matching task5-rushloop.mjs scenario A/B.
@@ -40,6 +40,13 @@ async function enterRushAndHatten(page, stockQueue) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   await enterRushAndHatten(page, [0.01, 0.01, 0.9, 0.01, 0.9]);
+
+  const atariText = await page.locator('#mb').innerText();
+  assert.match(atariText, /あたり/);
+  await clickThroughModal(page); // あたり -> V画像 (hitCount=3 >= 2)
+  const vText = await page.locator('#mb').innerText();
+  assert.match(vText, /V3000/);
+  await clickThroughModal(page); // V画像 -> result
 
   const resultText = await page.locator('#mb').innerText();
   assert.match(resultText, /4500ボーナス/);
