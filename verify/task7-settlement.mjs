@@ -11,10 +11,6 @@ const page = await browser.newPage();
 await page.goto(url);
 // hit, senbare shown, no levaburu/vfla, rush entry success
 await page.evaluate(q => window.__TEST__.setRandomQueue(q), [0.0001, 0.0001, 0.99, 0.99, 0.0001]);
-await page.click('#w-30000');
-await page.click('#rp');
-await page.click('#sp-good');
-await page.click('#gbtn');
 await page.waitForSelector('#game.active');
 
 await page.click('#btn1');

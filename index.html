@@ -17,23 +17,6 @@ body{
   font-family:'Helvetica Neue',Arial,sans-serif;
   max-width:480px;margin:0 auto;overflow-x:hidden;
 }
-#setup{
-  min-height:100vh;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;padding:24px 16px;gap:16px;
-}
-.s-title{font-size:30px;font-weight:bold;color:var(--gold);text-align:center;text-shadow:0 0 24px rgba(200,30,30,.6);letter-spacing:4px;}
-.s-sub{font-size:13px;color:var(--dim);text-align:center;margin-top:4px;}
-.s-card{width:100%;background:var(--panel2);border:1px solid var(--ring);border-radius:12px;padding:16px;}
-.s-step{font-size:10px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;}
-.og{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.og3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-.opt{background:var(--panel);border:2px solid #444;border-radius:10px;color:var(--text);padding:12px 6px;font-size:12px;cursor:pointer;text-align:center;line-height:1.5;transition:all .15s;}
-.opt.sel{border-color:var(--gold);background:rgba(200,30,30,.15);color:var(--gold);}
-.opt:active{transform:scale(.97);}
-.s-opt-sub{font-size:10px;color:#aaa;}
-.go-btn{width:100%;background:linear-gradient(135deg,#7a0000,#c81e1e,#ffd700,#7a0000);color:#fff;border:none;border-radius:12px;font-size:20px;font-weight:bold;padding:18px;cursor:pointer;letter-spacing:2px;}
-.go-btn:disabled{opacity:.35;cursor:default;}
-.go-btn:not(:disabled):active{transform:scale(.98);}
 .bok{display:inline-block;padding:13px 28px;background:linear-gradient(135deg,#7a0000,#c81e1e,#ffd700,#7a0000);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;margin-top:8px;}
 .bok:active{transform:scale(.97);}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
@@ -53,6 +36,8 @@ body{
 .sv{font-size:18px;font-weight:bold;}
 .sv.neg{color:var(--red);}
 .sv.gold{color:var(--gold);}
+.spkSel{background:var(--panel2);color:var(--gold);border:1px solid #444;border-radius:6px;padding:4px 6px;font-size:13px;font-weight:bold;}
+.spkSel:disabled{opacity:.5;}
 .bbl{background:var(--panel);border-radius:8px;padding:6px 10px;margin-bottom:5px;}
 .bb-top{display:flex;align-items:baseline;justify-content:center;gap:6px;margin-bottom:4px;}
 .bb-lbl{font-size:10px;color:var(--gold);}
@@ -87,34 +72,6 @@ body{
 </head>
 <body>
 
-<div id="setup">
-  <div>
-    <div class="s-title">eフィーバー<br>キン肉マン</div>
-    <div class="s-sub">疑似遊技シミュレーター</div>
-  </div>
-  <div class="s-card">
-    <div class="s-step">Step 1 — 所持金</div>
-    <div id="wopts" class="og">
-      <button class="opt" id="w-10000" onclick="selW(10000)"><strong>¥10,000</strong><br><span class="s-opt-sub">仕事帰り</span></button>
-      <button class="opt" id="w-30000" onclick="selW(30000)"><strong>¥30,000</strong><br><span class="s-opt-sub">夕方から</span></button>
-      <button class="opt" id="w-60000" onclick="selW(60000)"><strong>¥60,000</strong><br><span class="s-opt-sub">昼から</span></button>
-      <button class="opt" id="w-200000" onclick="selW(200000)"><strong>¥200,000</strong><br><span class="s-opt-sub">朝からタコ粘り</span></button>
-    </div>
-  </div>
-  <div class="s-card">
-    <div class="s-step">Step 2 — 交換レート</div>
-    <div class="og">
-      <button class="opt" id="rp" onclick="selR('par')"><strong>等価</strong><br><span class="s-opt-sub">4円投資 / 4円換金</span></button>
-      <button class="opt" id="rs" onclick="selR('s357')"><strong>3.57円返し</strong><br><span class="s-opt-sub">4円投資 / 3.57円換金</span></button>
-    </div>
-  </div>
-  <div class="s-card">
-    <div class="s-step">Step 3 — 店を選ぶ</div>
-    <div id="sopts" class="og3"></div>
-  </div>
-  <button class="go-btn" id="gbtn" onclick="startGame()" disabled>▶ 遊技開始</button>
-</div>
-
 <div id="game">
   <div id="stats">
     <div class="stats-grid">
@@ -123,6 +80,7 @@ body{
       <div class="sb" style="grid-column:span 2;justify-content:center;gap:10px"><span class="sl">持ち玉：</span><span class="sv" id="tb" style="color:var(--cyan)">0</span><span class="sl" id="plApprox" style="font-size:12px">（収支：¥0）</span></div>
       <div class="sb"><span class="sl">スタート：</span><span class="sv" id="tc">0</span></div>
       <div class="sb"><span class="sl">総回転数：</span><span class="sv" id="tt">0</span></div>
+      <div class="sb" style="grid-column:span 2;justify-content:center;gap:8px"><span class="sl">回転率：</span><select id="spkSel" class="spkSel" onchange="changeSpk(this.value)"><option value="17">17回</option><option value="15">15回</option><option value="13">13回</option></select></div>
     </div>
     <div class="bbl">
       <div class="bb-top">
@@ -173,43 +131,17 @@ body{
 'use strict';
 
 const C={
-  SHOPS:{par:{good:17.2,bad:16.0,worst:13.0},s357:{good:18.1,bad:17.0,worst:14.0}},
-  EX:{par:4.0,s357:3.57},
+  WALLET:100000,
+  EX:4.0,
   BPK:250,
+  SPIN_LIMIT:2800,
 };
 
-let _reg=null,_shop=null,_wallet=null;
-
-const SDEF={
-  par: [{k:'good',l:'優良店',s:'17.2回/千円'},{k:'bad',l:'悪店',s:'16.0回/千円'},{k:'worst',l:'極悪店',s:'13.0回/千円'}],
-  s357:[{k:'good',l:'優良店',s:'18.1回/千円'},{k:'bad',l:'悪店',s:'17.0回/千円'},{k:'worst',l:'極悪店',s:'14.0回/千円'}],
-};
-
-function selW(w){
-  _wallet=w;
-  [10000,30000,60000,200000].forEach(x=>{const e=document.getElementById('w-'+x);if(e)e.classList.toggle('sel',x===w);});
-  chkR();
-}
-function selR(r){
-  _reg=r; _shop=null;
-  document.getElementById('rp').classList.toggle('sel',r==='par');
-  document.getElementById('rs').classList.toggle('sel',r==='s357');
-  document.getElementById('sopts').innerHTML=SDEF[r].map(d=>
-    `<button class="opt" id="sp-${d.k}" onclick="selS('${d.k}')">
-      <strong>${d.l}</strong><br><span class="s-opt-sub">${d.s}</span>
-    </button>`).join('');
-  chkR();
-}
-function selS(k){
-  _shop=k;
-  ['good','bad','worst'].forEach(x=>{const e=document.getElementById('sp-'+x);if(e)e.classList.toggle('sel',x===k);});
-  chkR();
-}
-function chkR(){document.getElementById('gbtn').disabled=!(_wallet&&_reg&&_shop);}
-
-function startGame(){
-  document.getElementById('setup').style.display='none';
-  document.getElementById('game').classList.add('active');
+function changeSpk(v){
+  if(S.spkLocked) return;
+  S.spk=Number(v);
+  S.bps=C.BPK/S.spk;
+  updS();
 }
 
 let _res=null;
@@ -281,13 +213,10 @@ Object.assign(C,{
 let S={};
 let _busy=false,_closingChoice=null;
 
-function getSpinLimit(w){
-  return {10000:400,30000:1200,60000:2400,200000:4000}[w]||null;
-}
-function newState(w,reg,shop){
-  const spk=C.SHOPS[reg][shop];
+function newState(){
+  const spk=17;
   S={
-    wallet:w, balls:0,
+    wallet:C.WALLET, balls:0,
     cashUsed:0, investB:0, recovB:0,
     hits:{
       total:0,
@@ -299,11 +228,11 @@ function newState(w,reg,shop){
       chargeRush:0,
     },
     cur:0, ttl:0,
-    spk, bps:C.BPK/spk,
-    exRate:C.EX[reg],
-    reg, hist:[],
+    spk, bps:C.BPK/spk, spkLocked:false,
+    exRate:C.EX,
+    hist:[],
     pendingInvest:0,
-    spinLimit:getSpinLimit(w), limitPassed:false,
+    spinLimit:C.SPIN_LIMIT, limitPassed:false,
     rushActive:false, rushST:0, preDevST:0, renchan:0, rushStock:[0,0,0,0,0,0],
   };
 }
@@ -695,8 +624,15 @@ function pressFx(el){
   el.classList.add('btnPress');
 }
 
+function lockSpk(){
+  if(S.spkLocked) return;
+  S.spkLocked=true;
+  document.getElementById('spkSel').disabled=true;
+}
+
 async function doSpin1(){
   if(_busy) return;
+  lockSpk();
   pressFx(document.getElementById('btn1'));
   _busy=true; lockAll(true);
   const r=await oneSpin();
@@ -708,6 +644,7 @@ async function doSpin1(){
 
 async function doSpin100(){
   if(_busy) return;
+  lockSpk();
   pressFx(document.getElementById('btn100'));
   _busy=true; lockAll(true);
   let over=false;
@@ -773,12 +710,11 @@ function showSettle(){
   const outRate=S.investB>0?Math.round(Math.floor(S.balls)/S.investB*100):0;
   const plColor=finalPL>=0?'#22c55e':'#ef4444';
   const plSign=finalPL>=0?'+':'';
-  const ratelabel=S.reg==='par'?'等価':'3.57円返し';
   const html=`
     <div class="mt" style="color:var(--gold)">精算</div>
     <hr style="border-color:#333;margin:8px 0">
     <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">持ち玉</span><span class="sv2">${Math.floor(S.balls).toLocaleString()}玉</span></div>
-    <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">換金（${ratelabel}）</span><span class="sv2">¥${Math.round(exchY).toLocaleString()}</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">換金（等価）</span><span class="sv2">¥${Math.round(exchY).toLocaleString()}</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">総投資</span><span class="sv2" style="color:var(--red)">−¥${S.cashUsed.toLocaleString()}</span></div>
     <hr style="border-color:#333;margin:8px 0">
     <div class="sfin" style="color:${plColor};font-size:26px;font-weight:bold;text-align:center;padding:12px 0">${plSign}¥${Math.abs(finalPL).toLocaleString()}</div>
@@ -796,12 +732,9 @@ function showSettle(){
   showM(html,'mn');
 }
 
-const _origStartGame=startGame;
-startGame=function(){
-  newState(_wallet,_reg,_shop);
-  _origStartGame();
-  updS();
-};
+newState();
+document.getElementById('game').classList.add('active');
+updS();
 </script>
 </body>
 </html>

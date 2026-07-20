@@ -13,7 +13,6 @@ page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
 await page.goto(url);
 
 await page.evaluate(() => {
-  newState(20000, 'par', 'good');
   S.hits.charge = 3;
   S.hits.chargeRush = 1;
   updS();

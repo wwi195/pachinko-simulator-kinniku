@@ -9,10 +9,6 @@ const url = 'file://' + path.join(dir, '..', 'index.html');
 async function setup(page, queue) {
   await page.goto(url);
   await page.evaluate(q => window.__TEST__.setRandomQueue(q), queue);
-  await page.click('#w-200000');
-  await page.click('#rp');
-  await page.click('#sp-good');
-  await page.click('#gbtn');
   await page.waitForSelector('#game.active');
 }
 

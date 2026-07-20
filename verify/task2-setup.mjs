@@ -13,20 +13,18 @@ await page.goto(url);
 const title = await page.title();
 assert.equal(title, 'eフィーバーキン肉マン 疑似遊技シミュレーター');
 
-// Start button disabled until all 3 steps chosen
-assert.equal(await page.isDisabled('#gbtn'), true);
+// Setup screen is gone; the game is active immediately on load.
+const gameActive = await page.evaluate(() => document.getElementById('game').classList.contains('active'));
+assert.equal(gameActive, true);
+assert.equal(await page.locator('#setup').count(), 0);
 
-await page.click('#w-30000');
-await page.click('#rp');
-// shop options render after rate is chosen
-await page.click('#sp-good');
-
-assert.equal(await page.isDisabled('#gbtn'), false);
-
-await page.click('#gbtn');
-await page.waitForSelector('#game.active');
-const setupDisplay = await page.evaluate(() => document.getElementById('setup').style.display);
-assert.equal(setupDisplay, 'none');
+// Fixed wallet, default spk 17, dropdown enabled pre-spin.
+const initial = await page.evaluate(() => ({ wallet: S.wallet, spk: S.spk, spkLocked: S.spkLocked }));
+assert.equal(initial.wallet, 100000);
+assert.equal(initial.spk, 17);
+assert.equal(initial.spkLocked, false);
+assert.equal(await page.isDisabled('#spkSel'), false);
+assert.equal(await page.inputValue('#spkSel'), '17');
 
 await browser.close();
 console.log('PASS: task2-setup');
