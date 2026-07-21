@@ -473,10 +473,19 @@ async function endRush(){
   updS();
 }
 
-function tmSenyouIn(){return `
+function tmSenyouIn(bulkEligible){
+  const bulkBtn=bulkEligible?`<button class="bok" style="flex:1;background:#1e1e1e;color:#999;border:1px solid #444" onclick="chooseFillBulk()">保留5個を一気に貯める</button>`:'';
+  return `
   ${imgDiv('images/senyou_in.png','専用モード突入\n画像プレースホルダー')}
   <div class="mt" style="color:var(--ring)">🔥 チャンス！保留チャージ！</div>
-  <button class="bok" onclick="closeM()">次へ →</button>`;}
+  <div style="display:flex;gap:10px;margin-top:8px">
+    <button class="bok" style="flex:1" onclick="chooseFillOneByOne()">次へ →</button>
+    ${bulkBtn}
+  </div>`;
+}
+let _senyouFillChoice='oneByOne';
+function chooseFillOneByOne(){_senyouFillChoice='oneByOne';closeM();}
+function chooseFillBulk(){_senyouFillChoice='bulk';closeM();}
 
 function tmStockFill(n){return `
   <div class="mt" style="color:var(--gold)">保留 ${n}/${C.STOCK_COUNT}</div>
@@ -521,9 +530,17 @@ function tmStockResult(hitCount,stReset,stValue,renchan){
 
 async function runSenyouMode(){
   S.preDevST=S.rushST;
-  await showM(tmSenyouIn(),'mn');
-  for(let i=1;i<=C.STOCK_COUNT;i++){
-    await showM(tmStockFill(i),'mn');
+  const bulkEligible=S.renchan>=6; // 5連チャン以上達成後、6連目からのショートカット
+  _senyouFillChoice='oneByOne';
+  await showM(tmSenyouIn(bulkEligible),'mn');
+
+  if(bulkEligible && _senyouFillChoice==='bulk'){
+    addH(`${S.renchan}連目：保留5個を一気に貯めた`,'inv');
+    await showM(tmStockFill(C.STOCK_COUNT),'mn');
+  } else {
+    for(let i=1;i<=C.STOCK_COUNT;i++){
+      await showM(tmStockFill(i),'mn');
+    }
   }
   await showM(tmJudgeButton(),'mn');
 
