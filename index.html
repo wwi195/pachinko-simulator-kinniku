@@ -29,6 +29,7 @@ body{
 #game{display:none;}
 #game.active{display:flex;min-height:100vh;}
 #game{flex-direction:column;height:100vh;overflow:hidden;}
+#gameTitle{flex-shrink:0;text-align:center;padding:10px 10px 0;font-size:19px;font-weight:bold;color:var(--gold);text-shadow:0 0 16px rgba(200,30,30,.6);letter-spacing:2px;background:var(--panel2);}
 #stats{background:var(--panel2);border-bottom:2px solid var(--ring);padding:16px 10px 5px;flex-shrink:0;}
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:5px;}
 .sb{background:var(--panel);border-radius:8px;padding:6px 10px;display:flex;align-items:center;justify-content:center;gap:5px;}
@@ -73,6 +74,7 @@ body{
 <body>
 
 <div id="game">
+  <div id="gameTitle">eキン肉マン シミュレーター</div>
   <div id="stats">
     <div class="stats-grid">
       <div class="sb"><span class="sl">投資額：</span><span class="sv neg" id="ti">¥0</span></div>
