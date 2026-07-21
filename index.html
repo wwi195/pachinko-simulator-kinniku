@@ -250,6 +250,7 @@ function newState(){
 function floor500(y){return Math.floor(y/500)*500;}
 
 function updS(){
+  checkBulkUnlock();
   document.getElementById('ti').textContent=S.cashUsed>0?`−¥${S.cashUsed.toLocaleString()}`:'¥0';
   document.getElementById('tw').textContent=`¥${S.wallet.toLocaleString()}`;
   document.getElementById('tb').textContent=Math.floor(S.balls).toLocaleString();
@@ -383,6 +384,22 @@ function showRanking(){
     ${renderRankingList(loadRanking())}
     <button class="bok" onclick="closeM()" style="margin-top:14px">閉じる</button>`;
   showM(html,'mn');
+}
+
+/* ============================================================
+   BULK STOCK-FILL 恒久アンロック — 闇パチ中に5連以上・獲得出玉
+   1万発以上を一度でも達成したら、以降は全セッションで（連チャン数に
+   関わらず）保留5個一気貯めボタンが使えるようになる。
+============================================================ */
+const BULK_UNLOCK_KEY='kinnikuBulkUnlockedV1';
+let _bulkUnlocked=(()=>{ try{ return localStorage.getItem(BULK_UNLOCK_KEY)==='1'; }catch(e){ return false; } })();
+function checkBulkUnlock(){
+  if(_bulkUnlocked) return;
+  if(S.limitPassed && S.renchan>=5 && S.rushGrossTotal>=10000){
+    _bulkUnlocked=true;
+    try{ localStorage.setItem(BULK_UNLOCK_KEY,'1'); }catch(e){}
+    addH(`闇パチ中に5連以上・獲得出玉1万発を達成 → 以降、保留5個一気貯めが使えるようになった`,'inv');
+  }
 }
 
 async function handleClosingTime(){
@@ -537,7 +554,8 @@ function tmStockResult(hitCount,stReset,stValue,renchan){
 
 async function runSenyouMode(){
   S.preDevST=S.rushST;
-  const bulkEligible=S.renchan>=6; // 5連チャン以上達成後、6連目からのショートカット
+  // 今回のRUSH中に5連チャン以上達成（6連目から）、または過去に恒久アンロック済みならOK
+  const bulkEligible=S.renchan>=6 || _bulkUnlocked;
   _senyouFillChoice='oneByOne';
   await showM(tmSenyouIn(bulkEligible),'mn');
 
