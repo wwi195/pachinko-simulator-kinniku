@@ -863,7 +863,12 @@ function showSettle(){
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">初回大当たり</span><span class="sv2">${S.hits.first}回</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">チャージ発生/→RUSH突入</span><span class="sv2">${S.hits.charge}/${S.hits.chargeRush}</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">RUSHチャレンジ成功/失敗</span><span class="sv2">${S.hits.rushSuccess}/${S.hits.rushFail}</span></div>
-    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">7500/6000/4500/3000/1500ボーナス・はずれ</span><span class="sv2">${S.hits.stock[5]}/${S.hits.stock[4]}/${S.hits.stock[3]}/${S.hits.stock[2]}/${S.hits.stock[1]}/${S.hits.stock[0]}</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">7500ボーナス</span><span class="sv2">${S.hits.stock[5]}回</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">6000ボーナス</span><span class="sv2">${S.hits.stock[4]}回</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">4500ボーナス</span><span class="sv2">${S.hits.stock[3]}回</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">3000ボーナス</span><span class="sv2">${S.hits.stock[2]}回</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">1500ボーナス</span><span class="sv2">${S.hits.stock[1]}回</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">専用モード はずれ</span><span class="sv2">${S.hits.stock[0]}回</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">出玉率</span><span class="sv2" style="color:${outRate>=100?'#22c55e':'#ef4444'}">${outRate}%</span></div>
     ${rankHtml}
     <div style="margin-top:18px;text-align:center">
