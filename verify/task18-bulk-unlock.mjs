@@ -11,57 +11,60 @@ async function clickThroughModal(page) {
   await page.click('#mb .bok');
 }
 
-// Scenario A: reaching 闇パチ + 5連以上 + 獲得出玉1万発 sets the permanent
-// unlock flag, persists it to localStorage, and logs it to history.
-{
-  const browser = await chromium.launch();
+async function freshPage(browser) {
   const page = await browser.newPage();
   await page.goto(url);
   await page.waitForSelector('#game.active');
+  return page;
+}
 
-  const before = await page.evaluate(() => _bulkUnlocked);
-  assert.equal(before, false);
+// The three unlock conditions are OR'd together - any single one, on its own,
+// permanently unlocks the bulk-fill button.
+const soloConditions = [
+  { label: '闇パチ (S.limitPassed) alone', setup: () => { S.limitPassed = true; } },
+  { label: '5連以上 (S.renchan>=5) alone', setup: () => { S.renchan = 5; } },
+  { label: '獲得出玉1万発 (S.rushGrossTotal>=10000) alone', setup: () => { S.rushGrossTotal = 10000; } },
+];
 
-  await page.evaluate(() => {
-    S.limitPassed = true;
-    S.renchan = 5;
-    S.rushGrossTotal = 10000;
-    updS();
-  });
+for (const cond of soloConditions) {
+  const browser = await chromium.launch();
+  const page = await freshPage(browser);
 
-  const after = await page.evaluate(() => _bulkUnlocked);
-  assert.equal(after, true);
+  assert.equal(await page.evaluate(() => _bulkUnlocked), false);
+  await page.evaluate(cond.setup);
+  await page.evaluate(() => updS());
+
+  const unlocked = await page.evaluate(() => _bulkUnlocked);
+  assert.equal(unlocked, true, `${cond.label} should unlock the feature`);
   const stored = await page.evaluate(() => localStorage.getItem('kinnikuBulkUnlockedV1'));
   assert.equal(stored, '1');
   const histText = await page.locator('#hl').innerText();
   assert.match(histText, /保留5個一気貯めが使えるようになった/);
 
   await browser.close();
-  console.log('PASS: reaching 闇パチ+5連+1万発 sets the permanent unlock flag');
+  console.log(`PASS: ${cond.label} unlocks and persists the flag`);
 }
 
-// Scenario A2: falling short of any one condition does not unlock it.
+// None of the three conditions true -> stays locked.
 {
   const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await page.goto(url);
-  await page.waitForSelector('#game.active');
+  const page = await freshPage(browser);
 
   await page.evaluate(() => {
-    S.limitPassed = false; // not in 闇パチ
-    S.renchan = 5;
-    S.rushGrossTotal = 10000;
+    S.limitPassed = false;
+    S.renchan = 1;
+    S.rushGrossTotal = 0;
     updS();
   });
   assert.equal(await page.evaluate(() => _bulkUnlocked), false);
 
   await browser.close();
-  console.log('PASS: missing 闇パチ alone keeps the feature locked');
+  console.log('PASS: none of the three conditions met keeps the feature locked');
 }
 
-// Scenario B: with the flag pre-set via localStorage (simulating a past
-// session), a brand new session shows the bulk button even at renchan=1,
-// well under the in-session renchan>=6 threshold.
+// A flag set in an earlier session (via localStorage) shows the bulk button
+// even at renchan=1 in a brand new session, well under the in-session
+// renchan>=6 threshold.
 {
   const browser = await chromium.launch();
   const page = await browser.newPage();

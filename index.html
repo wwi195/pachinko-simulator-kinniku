@@ -97,12 +97,12 @@ body{
         <div class="br" style="display:flex;justify-content:space-between"><span>チャージ→RUSH突入</span><span class="bv" id="thChargeRush">0回</span></div>
         <div class="br" style="display:flex;justify-content:space-between"><span>RUSHチャレンジ成功</span><span class="bv" id="thRushOk">0回</span></div>
         <div class="br" style="display:flex;justify-content:space-between"><span>RUSHチャレンジ失敗</span><span class="bv" id="thRushNg">0回</span></div>
-        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 5/5</span><span class="bv" id="thStock5">0回</span></div>
-        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 4/5</span><span class="bv" id="thStock4">0回</span></div>
-        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 3/5</span><span class="bv" id="thStock3">0回</span></div>
-        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 2/5</span><span class="bv" id="thStock2">0回</span></div>
-        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード 1/5</span><span class="bv" id="thStock1">0回</span></div>
-        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード はずれ(0/5)</span><span class="bv" id="thStock0">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>7500ボーナス</span><span class="bv" id="thStock5">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>6000ボーナス</span><span class="bv" id="thStock4">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>4500ボーナス</span><span class="bv" id="thStock3">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>3000ボーナス</span><span class="bv" id="thStock2">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>1500ボーナス</span><span class="bv" id="thStock1">0回</span></div>
+        <div class="br" style="display:flex;justify-content:space-between"><span>専用モード はずれ</span><span class="bv" id="thStock0">0回</span></div>
       </div>
     </div>
     <div id="rushBadge" style="display:none;text-align:center;color:var(--gold);font-weight:bold;font-size:13px;margin-top:4px">
@@ -387,18 +387,18 @@ function showRanking(){
 }
 
 /* ============================================================
-   BULK STOCK-FILL 恒久アンロック — 闇パチ中に5連以上・獲得出玉
-   1万発以上を一度でも達成したら、以降は全セッションで（連チャン数に
-   関わらず）保留5個一気貯めボタンが使えるようになる。
+   BULK STOCK-FILL 恒久アンロック — 闇パチ中・5連以上・獲得出玉
+   1万発以上のいずれか1つでも一度達成したら、以降は全セッションで
+   （連チャン数に関わらず）保留5個一気貯めボタンが使えるようになる。
 ============================================================ */
 const BULK_UNLOCK_KEY='kinnikuBulkUnlockedV1';
 let _bulkUnlocked=(()=>{ try{ return localStorage.getItem(BULK_UNLOCK_KEY)==='1'; }catch(e){ return false; } })();
 function checkBulkUnlock(){
   if(_bulkUnlocked) return;
-  if(S.limitPassed && S.renchan>=5 && S.rushGrossTotal>=10000){
+  if(S.limitPassed || S.renchan>=5 || S.rushGrossTotal>=10000){
     _bulkUnlocked=true;
     try{ localStorage.setItem(BULK_UNLOCK_KEY,'1'); }catch(e){}
-    addH(`闇パチ中に5連以上・獲得出玉1万発を達成 → 以降、保留5個一気貯めが使えるようになった`,'inv');
+    addH(`闇パチ中・5連以上・獲得出玉1万発のいずれかを達成 → 以降、保留5個一気貯めが使えるようになった`,'inv');
   }
 }
 
@@ -863,7 +863,7 @@ function showSettle(){
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">初回大当たり</span><span class="sv2">${S.hits.first}回</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">チャージ発生/→RUSH突入</span><span class="sv2">${S.hits.charge}/${S.hits.chargeRush}</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">RUSHチャレンジ成功/失敗</span><span class="sv2">${S.hits.rushSuccess}/${S.hits.rushFail}</span></div>
-    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">専用モード 5/5〜0/5</span><span class="sv2">${S.hits.stock[5]}/${S.hits.stock[4]}/${S.hits.stock[3]}/${S.hits.stock[2]}/${S.hits.stock[1]}/${S.hits.stock[0]}</span></div>
+    <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">7500/6000/4500/3000/1500ボーナス・はずれ</span><span class="sv2">${S.hits.stock[5]}/${S.hits.stock[4]}/${S.hits.stock[3]}/${S.hits.stock[2]}/${S.hits.stock[1]}/${S.hits.stock[0]}</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">出玉率</span><span class="sv2" style="color:${outRate>=100?'#22c55e':'#ef4444'}">${outRate}%</span></div>
     ${rankHtml}
     <div style="margin-top:18px;text-align:center">
