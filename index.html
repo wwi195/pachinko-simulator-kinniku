@@ -103,7 +103,10 @@ body{
         <div class="br" style="display:flex;justify-content:space-between"><span>専用モード はずれ(0/5)</span><span class="bv" id="thStock0">0回</span></div>
       </div>
     </div>
-    <div id="rushBadge" style="display:none;text-align:center;color:var(--gold);font-weight:bold;font-size:13px;margin-top:4px">RUSH中　残りST <span id="rushStVal">0</span>　<span id="renchanVal">1</span>連チャン中</div>
+    <div id="rushBadge" style="display:none;text-align:center;color:var(--gold);font-weight:bold;font-size:13px;margin-top:4px">
+      RUSH中　残りST <span id="rushStVal">0</span>　<span id="renchanVal">1</span>連チャン中
+      <div style="font-size:12px;margin-top:2px">獲得出玉：<span id="rushGrossVal">0</span>発</div>
+    </div>
   </div>
 
   <div id="ctrl">
@@ -238,6 +241,7 @@ function newState(){
     pendingInvest:0,
     spinLimit:C.SPIN_LIMIT, limitPassed:false,
     rushActive:false, rushST:0, preDevST:0, renchan:0, rushStock:[0,0,0,0,0,0],
+    rushGrossTotal:0,
   };
 }
 
@@ -258,6 +262,7 @@ function updS(){
   document.getElementById('rushBadge').style.display=S.rushActive?'block':'none';
   document.getElementById('rushStVal').textContent=S.rushST;
   document.getElementById('renchanVal').textContent=S.renchan;
+  document.getElementById('rushGrossVal').textContent=S.rushGrossTotal.toLocaleString();
   document.getElementById('normalCtrl').style.display=S.rushActive?'none':'flex';
   document.getElementById('rushCtrl').style.display=S.rushActive?'flex':'none';
   document.getElementById('thFirst').textContent=`${S.hits.first}回`;
@@ -568,6 +573,8 @@ async function runSenyouMode(){
     const gross=hitCount*C.B_UNIT_GROSS;
     const net=hitCount*C.B_UNIT_NET;
     award(net);
+    S.hits.total++;
+    S.rushGrossTotal+=gross;
     S.rushST=C.RUSH_ST;
     S.renchan++;
     addH(`専用モード：${hitCount}/5 当たり → ${gross}ボーナス（実質+${net}発）→ ST${C.RUSH_ST}にリセット（${S.renchan}連目）`,'hit');
@@ -623,6 +630,7 @@ async function runNormalWinChain(){
     S.rushActive=true;
     S.rushST=C.RUSH_ST;
     S.rushStock=[0,0,0,0,0,0];
+    S.rushGrossTotal=C.B_UNIT_GROSS;
     updS();
     await showM(tmRushResult(true),'mn');
   } else {
@@ -633,6 +641,7 @@ async function runNormalWinChain(){
       S.rushActive=true;
       S.rushST=C.RUSH_ST;
       S.rushStock=[0,0,0,0,0,0];
+      S.rushGrossTotal=C.B_UNIT_GROSS;
       updS();
       await showM(tmRushResult(true),'mn');
     } else {
@@ -663,6 +672,7 @@ async function runChargeEvent(){
     S.rushActive=true;
     S.rushST=C.RUSH_ST;
     S.rushStock=[0,0,0,0,0,0];
+    S.rushGrossTotal=C.CHARGE_AWARD;
     S.renchan=1;
     updS();
     await showM(tmRushResult(true),'mn');
@@ -678,11 +688,12 @@ async function runChargeEvent(){
 ============================================================ */
 async function oneSpin(){
   if(S.rushActive){
-    // RUSH/ST中は電サポで玉が減らない仕様 — 回転数だけ進める
-    S.cur++; S.ttl++; updS();
+    // RUSH/ST中は電サポで玉が減らない仕様。ST中の回転は総回転数・
+    // スタートには含めない（S.cur/S.ttlは増やさない）。
+    updS();
     S.rushST--;
     if(rand()<C.P_HATTEN){
-      addH(`${S.ttl}回転目：発展！`,'hit');
+      addH(`ST${C.RUSH_ST-S.rushST}回転目：発展！`,'hit');
       await runSenyouMode();
       return {stopped:true};
     }
