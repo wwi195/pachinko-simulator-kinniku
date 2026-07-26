@@ -347,8 +347,8 @@ function chooseRetire(){_closingChoice='retire';closeM();}
 function chooseContinue(){_closingChoice='continue';closeM();}
 
 /* ============================================================
-   RANKING — 所持金以内または2800回転（闇パチ移行前）で退店した
-   時点の持ち玉数を、上位10件までブラウザのlocalStorageに保存する。
+   RANKING — RUSH終了時点での獲得出玉と連チャン数を、闇パチ中に
+   終了したRUSHを除いて、上位10件までブラウザのlocalStorageに保存する。
 ============================================================ */
 const RANK_KEY='kinnikuRankingV1';
 function loadRanking(){
