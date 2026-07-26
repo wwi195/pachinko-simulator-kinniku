@@ -152,4 +152,22 @@ async function clickThroughModal(page) {
   console.log('PASS: a RUSH ending during 闇パチ is excluded from ranking');
 }
 
+// Scenario F: the settlement screen no longer shows any ranking block.
+{
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  await setup(page, new Array(5).fill(0.999999)); // force misses so retirement is trivial
+  await page.click('#btn1');
+  await page.click('#btnr'); // 退店 -> settlement
+  await page.waitForSelector('#ov:not(.h)');
+  const settleText = await page.locator('#mb').innerText();
+  assert.doesNotMatch(settleText, /最高出玉ランキング/);
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('kinnikuRankingV1') || '[]'));
+  assert.equal(stored.length, 0); // retirement no longer records anything
+
+  await browser.close();
+  console.log('PASS: settlement screen no longer shows a ranking block');
+}
+
 console.log('PASS: task15-ranking');

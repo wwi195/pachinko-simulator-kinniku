@@ -327,7 +327,7 @@ function tmClosingTime(){return `
   <div class="ms2" style="line-height:1.8">
     通常時 <strong style="color:var(--text)">${S.spinLimit}回転</strong> に達しました。<br>
     闇パチに移動しますか？（非合法オールナイト営業へ）<br><br>
-    <span style="color:#f87171">※闇パチへ進むと、ここまでの出玉は最高出玉ランキングの対象外になります</span>
+    <span style="color:#f87171">※闇パチ中に終了したRUSHは、最高出玉ランキングの対象外になります</span>
   </div>
   <div style="display:flex;gap:10px;margin-top:12px">
     <button class="bok" style="flex:1;background:#1e1e1e;color:#999;border:1px solid #444" onclick="chooseRetire()">いいえ（退店する）</button>
@@ -860,22 +860,6 @@ function showSettle(){
   const plColor=finalPL>=0?'#22c55e':'#ef4444';
   const plSign=finalPL>=0?'+':'';
 
-  // 闇パチ（居座り継続）を経由した場合はランキング対象外。
-  let rankHtml;
-  if(S.limitPassed){
-    rankHtml=`
-      <hr style="border-color:#333;margin:8px 0">
-      <div class="mt" style="font-size:16px;color:var(--gold)">🏆 最高出玉ランキング</div>
-      <div class="ms2" style="color:#888">闇パチを経由したため今回は対象外です</div>`;
-  } else {
-    const {list, entry, madeList}=recordRanking(Math.floor(S.balls));
-    rankHtml=`
-      <hr style="border-color:#333;margin:8px 0">
-      <div class="mt" style="font-size:16px;color:var(--gold)">🏆 最高出玉ランキング</div>
-      ${madeList?'<div class="ms2" style="color:var(--gold)">ランクイン！</div>':''}
-      ${renderRankingList(list, entry)}`;
-  }
-
   const html=`
     <div class="mt" style="color:var(--gold)">精算</div>
     <hr style="border-color:#333;margin:8px 0">
@@ -897,7 +881,6 @@ function showSettle(){
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">1500ボーナス</span><span class="sv2">${S.hits.stock[1]}回</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">専用モード はずれ</span><span class="sv2">${S.hits.stock[0]}回</span></div>
     <div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span class="sk">出玉率</span><span class="sv2" style="color:${outRate>=100?'#22c55e':'#ef4444'}">${outRate}%</span></div>
-    ${rankHtml}
     <div style="margin-top:18px;text-align:center">
       <button class="bok" onclick="location.reload()">もう一度遊ぶ</button>
     </div>`;
