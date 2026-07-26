@@ -92,4 +92,64 @@ async function clickThroughModal(page) {
   console.log('PASS: ランキング button shows persisted entries with renchan, no new record');
 }
 
+// Scenario D: RUSH ending normally (no 闇パチ) records this RUSH's gross
+// balls + renchan into the ranking, and shows it on the RUSH-end screen.
+{
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  // hit, senbare, no levaburu/vfla, reliability-win, rush entry success
+  await setup(page, [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001]);
+  await page.click('#btn1');
+  for (let i = 0; i < 5; i++) await clickThroughModal(page); // -> RUSH active (renchan=1, gross=1500)
+
+  await page.evaluate(() => { S.rushST = 1; }); // force ST exhaustion on next non-発展 spin
+  await page.evaluate(q => window.__TEST__.setRandomQueue(q), [0.99]); // P_HATTEN miss
+  await page.click('#btnR1');
+  await page.waitForSelector('#ov:not(.h)');
+  const endText = await page.locator('#mb').innerText();
+  assert.match(endText, /RUSH終了/);
+  assert.match(endText, /最高出玉ランキング/);
+  assert.match(endText, /ランクイン/);
+  assert.match(endText, /1,500玉 \(1連\)/);
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('kinnikuRankingV1')));
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].balls, 1500);
+  assert.equal(stored[0].renchan, 1);
+
+  await browser.close();
+  console.log('PASS: RUSH ending normally records gross balls + renchan into ranking');
+}
+
+// Scenario E: a RUSH that ends while 闇パチ is active (S.limitPassed) is
+// excluded from the ranking, and the RUSH-end screen says so.
+{
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  await setup(page, new Array(20).fill(0.999999)); // force misses so the closing prompt fires cleanly
+  await page.evaluate(() => { S.ttl = S.spinLimit; });
+  await page.click('#btn1'); // triggers closing-time prompt
+  await page.waitForSelector('#ov:not(.h)');
+  await page.click('button:has-text("はい（闇パチへ）")');
+  await clickThroughModal(page); // close 闇パチ突入 flavor modal
+
+  // hit, senbare, no levaburu/vfla, reliability-win, rush entry success
+  await page.evaluate(q => window.__TEST__.setRandomQueue(q), [0.0001, 0.0001, 0.99, 0.99, 0.0001, 0.0001]);
+  await page.click('#btn1');
+  for (let i = 0; i < 5; i++) await clickThroughModal(page); // -> RUSH active during 闇パチ
+
+  await page.evaluate(() => { S.rushST = 1; });
+  await page.evaluate(q => window.__TEST__.setRandomQueue(q), [0.99]);
+  await page.click('#btnR1');
+  await page.waitForSelector('#ov:not(.h)');
+  const endText = await page.locator('#mb').innerText();
+  assert.match(endText, /対象外/);
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('kinnikuRankingV1') || '[]'));
+  assert.equal(stored.length, 0);
+
+  await browser.close();
+  console.log('PASS: a RUSH ending during 闇パチ is excluded from ranking');
+}
+
 console.log('PASS: task15-ranking');

@@ -475,7 +475,7 @@ function tmRushResult(win){return win?`
   <div class="ms2">通常時へ戻ります</div>
   <button class="bok" onclick="closeM()">続ける</button>`;}
 
-function tmRushEnd(renchan,rushStock,totalBalls){
+function tmRushEnd(renchan,rushStock,totalBalls,rankHtml){
   const rows=[1,2,3,4,5].map(n=>
     `<div class="sr" style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span class="sk">${n*C.B_UNIT_GROSS}ボーナス</span><span class="sv2">${rushStock[n]}回</span></div>`
   ).join('');
@@ -488,17 +488,38 @@ function tmRushEnd(renchan,rushStock,totalBalls){
   ${rows}
   <hr style="border-color:#333;margin:8px 0">
   <div class="sr" style="display:flex;justify-content:space-between;padding:6px 0"><span class="sk">総獲得出玉</span><span class="sv2" style="color:var(--gold);font-weight:bold">${totalBalls.toLocaleString()}発（1500×${units}）</span></div>
+  ${rankHtml}
   <button class="bok" onclick="closeM()">通常時へ</button>`;}
 
 async function endRush(){
   S.rushActive=false;
   const finalRenchan=S.renchan;
   const rushStock=S.rushStock;
-  const totalBalls=rushStock.reduce((sum,cnt,hitCount)=>sum+cnt*hitCount*C.B_UNIT_GROSS,0);
+  // rushStockはRUSH中の専用モード（発展）での上乗せ分しか数えておらず、
+  // RUSH突入時点の初回獲得分（1500発／チャージ発生時はCHARGE_AWARD）を
+  // 含まないため、totalBallsにはRUSH全体を通算しているrushGrossTotalを使う。
+  const totalBalls=S.rushGrossTotal;
   addH(`RUSH終了（ST消化）　${finalRenchan}連チャンで終了`,'inv');
+
+  // 闇パチ（居座り継続）中に終了したRUSHはランキング対象外。
+  let rankHtml;
+  if(S.limitPassed){
+    rankHtml=`
+      <hr style="border-color:#333;margin:8px 0">
+      <div class="mt" style="font-size:16px;color:var(--gold)">🏆 最高出玉ランキング</div>
+      <div class="ms2" style="color:#888">闇パチ中のため今回は対象外です</div>`;
+  } else {
+    const {list, entry, madeList}=recordRanking(totalBalls, finalRenchan);
+    rankHtml=`
+      <hr style="border-color:#333;margin:8px 0">
+      <div class="mt" style="font-size:16px;color:var(--gold)">🏆 最高出玉ランキング</div>
+      ${madeList?'<div class="ms2" style="color:var(--gold)">ランクイン！</div>':''}
+      ${renderRankingList(list, entry)}`;
+  }
+
   S.renchan=0;
   updS();
-  await showM(tmRushEnd(finalRenchan,rushStock,totalBalls),'mn');
+  await showM(tmRushEnd(finalRenchan,rushStock,totalBalls,rankHtml),'mn');
   S.cur=0;
   updS();
 }
