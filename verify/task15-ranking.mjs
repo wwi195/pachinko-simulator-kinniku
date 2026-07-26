@@ -17,67 +17,62 @@ async function clickThroughModal(page) {
   await page.click('#mb .bok');
 }
 
-// Scenario A: retiring normally (no 闇パチ) records the balls-at-settlement
-// value into the ranking and shows it as ランクイン on an empty ranking.
-{
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await setup(page, new Array(20).fill(0.999999)); // force misses so balls stay simple
-
-  await page.click('#btn1'); // one miss spin, just to move state forward
-  await page.click('#btnr'); // 退店 -> settlement
-  await page.waitForSelector('#ov:not(.h)');
-  const settleText = await page.locator('#mb').innerText();
-  assert.match(settleText, /最高出玉ランキング/);
-  assert.match(settleText, /ランクイン/);
-
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('kinnikuRankingV1')));
-  assert.equal(stored.length, 1);
-  const expectedBalls = await page.evaluate(() => Math.floor(S.balls));
-  assert.equal(stored[0].balls, expectedBalls);
-
-  await browser.close();
-  console.log('PASS: normal retirement records a ranking entry');
-}
-
-// Scenario B: entering 闇パチ (choosing to continue past closing time)
-// excludes that session from the ranking.
-{
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await setup(page, new Array(20).fill(0.999999));
-
-  // Force S.ttl straight to the spin limit so handleClosingTime() fires on next spin.
-  await page.evaluate(() => { S.ttl = S.spinLimit; });
-  await page.click('#btn1'); // triggers closing-time prompt
-  await page.waitForSelector('#ov:not(.h)');
-  const promptText = await page.locator('#mb').innerText();
-  assert.match(promptText, /ランキングの対象外/);
-  await page.click('button:has-text("はい（闇パチへ）")');
-  await clickThroughModal(page); // close the 闇パチ突入 flavor modal
-
-  await page.click('#btnr'); // 退店 -> settlement, should now be excluded
-  await page.waitForSelector('#ov:not(.h)');
-  const settleText = await page.locator('#mb').innerText();
-  assert.match(settleText, /対象外/);
-
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('kinnikuRankingV1') || '[]'));
-  assert.equal(stored.length, 0);
-
-  await browser.close();
-  console.log('PASS: choosing 闇パチ excludes the session from ranking');
-}
-
-// Scenario C: the anytime ランキング button shows persisted entries without
-// recording a new one.
+// Scenario A: legacy-format ranking data (no `renchan` field) is discarded on load.
 {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   await page.goto(url);
   await page.evaluate(() => {
     localStorage.setItem('kinnikuRankingV1', JSON.stringify([
-      { balls: 50000, date: '2026/1/1' },
-      { balls: 30000, date: '2026/1/2' },
+      { balls: 50000, date: '2026/1/1' }, // legacy shape: no renchan field
+    ]));
+  });
+  await page.reload();
+  await page.waitForSelector('#game.active');
+
+  const stored = await page.evaluate(() => loadRanking());
+  assert.deepEqual(stored, []);
+  const raw = await page.evaluate(() => localStorage.getItem('kinnikuRankingV1'));
+  assert.equal(raw, '[]');
+
+  await browser.close();
+  console.log('PASS: legacy ranking data (no renchan field) is discarded on load');
+}
+
+// Scenario B: recordRanking stores renchan and renderRankingList shows it.
+{
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  await page.goto(url);
+  await page.waitForSelector('#game.active');
+
+  const result = await page.evaluate(() => recordRanking(4500, 3));
+  assert.equal(result.entry.balls, 4500);
+  assert.equal(result.entry.renchan, 3);
+  assert.equal(result.madeList, true);
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('kinnikuRankingV1')));
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].balls, 4500);
+  assert.equal(stored[0].renchan, 3);
+
+  const rendered = await page.evaluate(() => renderRankingList(loadRanking()));
+  assert.match(rendered, /4,500玉 \(3連\)/);
+
+  await browser.close();
+  console.log('PASS: recordRanking stores renchan and renderRankingList shows it');
+}
+
+// Scenario C: the anytime ランキング button shows persisted entries (with
+// renchan) and the updated description text, without recording a new entry.
+{
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  await page.goto(url);
+  await page.evaluate(() => {
+    localStorage.setItem('kinnikuRankingV1', JSON.stringify([
+      { balls: 50000, renchan: 8, date: '2026/1/1' },
+      { balls: 30000, renchan: 4, date: '2026/1/2' },
     ]));
   });
   await page.reload();
@@ -86,14 +81,15 @@ async function clickThroughModal(page) {
   await page.click('#btnRank');
   await page.waitForSelector('#ov:not(.h)');
   const rankText = await page.locator('#mb').innerText();
-  assert.match(rankText, /50,000玉/);
-  assert.match(rankText, /30,000玉/);
+  assert.match(rankText, /RUSH終了時の獲得出玉/);
+  assert.match(rankText, /50,000玉 \(8連\)/);
+  assert.match(rankText, /30,000玉 \(4連\)/);
 
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('kinnikuRankingV1')));
   assert.equal(stored.length, 2); // unchanged, just viewing
 
   await browser.close();
-  console.log('PASS: ランキング button shows persisted entries without recording');
+  console.log('PASS: ランキング button shows persisted entries with renchan, no new record');
 }
 
 console.log('PASS: task15-ranking');

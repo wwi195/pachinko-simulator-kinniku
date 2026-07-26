@@ -354,16 +354,22 @@ const RANK_KEY='kinnikuRankingV1';
 function loadRanking(){
   try{
     const raw=localStorage.getItem(RANK_KEY);
-    return raw?JSON.parse(raw):[];
+    if(!raw) return [];
+    const list=JSON.parse(raw);
+    if(list.some(r=>typeof r.renchan!=='number')){
+      saveRanking([]);
+      return [];
+    }
+    return list;
   }catch(e){ return []; }
 }
 function saveRanking(list){
   try{ localStorage.setItem(RANK_KEY, JSON.stringify(list)); }catch(e){}
 }
-function recordRanking(balls){
+function recordRanking(balls, renchan){
   const list=loadRanking();
   const d=new Date();
-  const entry={balls, date:`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`};
+  const entry={balls, renchan, date:`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`};
   list.push(entry);
   list.sort((a,b)=>b.balls-a.balls);
   const trimmed=list.slice(0,10);
@@ -374,13 +380,13 @@ function renderRankingList(list, highlightEntry){
   if(list.length===0) return `<div class="ms2" style="text-align:center">まだ記録がありません</div>`;
   return list.map((r,i)=>{
     const isNew=r===highlightEntry;
-    return `<div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px${isNew?';color:var(--gold);font-weight:bold':''}"><span class="sk">${i+1}位${isNew?' 🆕':''}</span><span class="sv2">${r.balls.toLocaleString()}玉 <span style="font-size:10px;color:var(--dim)">${r.date}</span></span></div>`;
+    return `<div class="sr" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px${isNew?';color:var(--gold);font-weight:bold':''}"><span class="sk">${i+1}位${isNew?' 🆕':''}</span><span class="sv2">${r.balls.toLocaleString()}玉 (${r.renchan}連) <span style="font-size:10px;color:var(--dim)">${r.date}</span></span></div>`;
   }).join('');
 }
 function showRanking(){
   const html=`
     <div class="mt" style="color:var(--gold)">🏆 最高出玉ランキング</div>
-    <div class="ms2">所持金以内・2800回転（闇パチ移行前）での記録</div>
+    <div class="ms2">RUSH終了時の獲得出玉（闇パチ中終了を除く）</div>
     ${renderRankingList(loadRanking())}
     <button class="bok" onclick="closeM()" style="margin-top:14px">閉じる</button>`;
   showM(html,'mn');
